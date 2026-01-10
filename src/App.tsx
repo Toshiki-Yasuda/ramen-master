@@ -1,13 +1,25 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import type { GameState } from './types';
 import { TitleScreen, LoadingScreen } from './components/UI';
 
-// プレースホルダー画面
-const PlaceholderScreen = ({ name }: { name: string }) => (
-  <div className="flex items-center justify-center min-h-screen">
+// プレースホルダー画面（タイトルに戻るボタン付き）
+const PlaceholderScreen = ({
+  name,
+  onBack,
+}: {
+  name: string;
+  onBack: () => void;
+}) => (
+  <div className="flex flex-col items-center justify-center min-h-screen">
     <div className="text-center text-white">
       <p className="text-2xl mb-4">{name}画面</p>
-      <p className="text-gray-400">（実装予定）</p>
+      <p className="text-gray-400 mb-8">（実装予定）</p>
+      <button
+        className="px-6 py-3 bg-yellow-500 hover:bg-yellow-400 text-black font-bold rounded-lg transition-colors"
+        onClick={onBack}
+      >
+        タイトルに戻る
+      </button>
     </div>
   </div>
 );
@@ -15,10 +27,19 @@ const PlaceholderScreen = ({ name }: { name: string }) => (
 function App() {
   const [gameState, setGameState] = useState<GameState>('title');
 
+  // ローディング完了後にゲーム画面へ遷移
+  useEffect(() => {
+    if (gameState === 'loading') {
+      const timer = setTimeout(() => {
+        setGameState('playing');
+      }, 2000); // 2秒後にゲーム画面へ
+      return () => clearTimeout(timer);
+    }
+  }, [gameState]);
+
   // ゲーム開始処理
   const handleStart = useCallback(() => {
     setGameState('loading');
-    // TODO: 実際のローディング処理を追加
   }, []);
 
   // タイトルに戻る
@@ -41,13 +62,13 @@ function App() {
         );
 
       case 'playing':
-        return <PlaceholderScreen name="ゲーム" />;
+        return <PlaceholderScreen name="ゲーム" onBack={handleBackToTitle} />;
 
       case 'paused':
-        return <PlaceholderScreen name="ポーズ" />;
+        return <PlaceholderScreen name="ポーズ" onBack={handleBackToTitle} />;
 
       case 'result':
-        return <PlaceholderScreen name="リザルト" />;
+        return <PlaceholderScreen name="リザルト" onBack={handleBackToTitle} />;
 
       default:
         return <TitleScreen onStart={handleStart} />;
