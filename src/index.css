@@ -1,19 +1,39 @@
 @import "tailwindcss";
 
 /* ===========================
+   Tailwind テーマ拡張
+   =========================== */
+@theme {
+  /* ラーメン屋テーマカラー */
+  --color-ramen-red: #D32F2F;
+  --color-ramen-red-light: #EF5350;
+  --color-ramen-red-dark: #B71C1C;
+  --color-ramen-orange: #F57C00;
+  --color-ramen-orange-light: #FF9800;
+  --color-ramen-gold: #FFD54F;
+  --color-ramen-gold-light: #FFECB3;
+  --color-ramen-dark: #1A1A1A;
+  --color-ramen-dark-light: #2D2D2D;
+  --color-ramen-wood: #3E2723;
+  --color-ramen-wood-light: #5D4037;
+  --color-ramen-cream: #FFF8E1;
+  --color-ramen-cream-dark: #FFE0B2;
+}
+
+/* ===========================
    カラーパレット（CSS変数）
    =========================== */
 :root {
   /* メインカラー */
-  --color-primary: #D32F2F;      /* 赤 - 提灯、暖簾 */
-  --color-secondary: #F57C00;    /* オレンジ - 温かみ、照明 */
-  --color-accent: #FFD54F;       /* 黄色 - ハイライト、光 */
+  --color-primary: #D32F2F;
+  --color-secondary: #F57C00;
+  --color-accent: #FFD54F;
 
   /* 背景カラー */
   --color-bg-dark: #1A1A1A;
   --color-bg-light: #2D2D2D;
-  --color-wood: #3E2723;         /* 木目の暗い部分 */
-  --color-wood-light: #5D4037;   /* 木目の明るい部分 */
+  --color-wood: #3E2723;
+  --color-wood-light: #5D4037;
 
   /* テキストカラー */
   --color-text: #FFFFFF;
@@ -33,22 +53,7 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background:
-    /* 木目テクスチャ風グラデーション */
-    repeating-linear-gradient(
-      90deg,
-      var(--color-wood) 0px,
-      var(--color-wood-light) 2px,
-      var(--color-wood) 4px
-    ),
-    /* ベースグラデーション */
-    linear-gradient(
-      180deg,
-      var(--color-bg-dark) 0%,
-      var(--color-bg-light) 50%,
-      var(--color-bg-dark) 100%
-    );
-  background-blend-mode: overlay;
+  background: var(--color-bg-dark);
   color: var(--color-text-cream);
   overflow-x: hidden;
 }
@@ -71,11 +76,11 @@ body {
     opacity: 0.5;
   }
   50% {
-    transform: translateY(-50px) scaleX(1.2);
+    transform: translateY(-80px) scaleX(1.3);
     opacity: 0.3;
   }
   100% {
-    transform: translateY(-100px) scaleX(1.5);
+    transform: translateY(-150px) scaleX(1.6);
     opacity: 0;
   }
 }
@@ -85,17 +90,16 @@ body {
     transform: translateX(0);
   }
   50% {
-    transform: translateX(10px);
+    transform: translateX(15px);
   }
 }
 
-/* 湯気パーティクル */
 .steam-container {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  height: 200px;
+  height: 250px;
   pointer-events: none;
   z-index: 10;
   overflow: hidden;
@@ -104,51 +108,56 @@ body {
 .steam {
   position: absolute;
   bottom: 0;
-  width: 60px;
-  height: 60px;
+  width: 80px;
+  height: 80px;
   background: radial-gradient(
     ellipse at center,
-    rgba(255, 255, 255, 0.4) 0%,
-    rgba(255, 255, 255, 0.1) 40%,
+    rgba(255, 255, 255, 0.5) 0%,
+    rgba(255, 255, 255, 0.15) 40%,
     transparent 70%
   );
   border-radius: 50%;
   animation:
-    steam-rise 4s ease-out infinite,
-    steam-drift 3s ease-in-out infinite;
+    steam-rise 5s ease-out infinite,
+    steam-drift 4s ease-in-out infinite;
 }
 
-.steam:nth-child(1) { left: 10%; animation-delay: 0s; }
-.steam:nth-child(2) { left: 25%; animation-delay: 1s; width: 40px; height: 40px; }
-.steam:nth-child(3) { left: 50%; animation-delay: 0.5s; width: 80px; height: 80px; }
-.steam:nth-child(4) { left: 75%; animation-delay: 2s; width: 50px; height: 50px; }
-.steam:nth-child(5) { left: 90%; animation-delay: 1.5s; }
+.steam:nth-child(1) { left: 5%; animation-delay: 0s; width: 60px; height: 60px; }
+.steam:nth-child(2) { left: 20%; animation-delay: 1.2s; width: 50px; height: 50px; }
+.steam:nth-child(3) { left: 40%; animation-delay: 0.5s; width: 100px; height: 100px; }
+.steam:nth-child(4) { left: 60%; animation-delay: 2s; width: 70px; height: 70px; }
+.steam:nth-child(5) { left: 80%; animation-delay: 1.5s; width: 55px; height: 55px; }
+.steam:nth-child(6) { left: 95%; animation-delay: 0.8s; width: 65px; height: 65px; }
 
 /* ===========================
-   提灯エフェクト
+   グローエフェクト
    =========================== */
-@keyframes lantern-glow {
+@keyframes glow-pulse {
   0%, 100% {
-    filter: drop-shadow(0 0 20px rgba(255, 87, 34, 0.6));
+    box-shadow: 0 0 10px rgba(255, 213, 79, 0.3),
+                0 0 20px rgba(255, 213, 79, 0.2);
   }
   50% {
-    filter: drop-shadow(0 0 30px rgba(255, 87, 34, 0.9));
+    box-shadow: 0 0 20px rgba(255, 213, 79, 0.5),
+                0 0 40px rgba(255, 213, 79, 0.3);
   }
 }
 
-@keyframes lantern-sway {
+@keyframes border-glow {
   0%, 100% {
-    transform: rotate(-3deg);
+    border-color: rgba(255, 213, 79, 0.3);
   }
   50% {
-    transform: rotate(3deg);
+    border-color: rgba(255, 213, 79, 0.6);
   }
 }
 
-.lantern {
-  animation:
-    lantern-glow 2s ease-in-out infinite,
-    lantern-sway 4s ease-in-out infinite;
+.glow-effect {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+.border-glow {
+  animation: border-glow 2s ease-in-out infinite;
 }
 
 /* ===========================
@@ -167,7 +176,7 @@ body {
   border-radius: 4px;
   color: #3E2723;
   font-weight: 900;
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.5);
   box-shadow:
     inset 0 2px 4px rgba(255, 255, 255, 0.5),
@@ -217,7 +226,7 @@ body {
     0 2px 4px rgba(0, 0, 0, 0.4);
 }
 
-/* 赤い食券ボタン（メインアクション用） */
+/* 赤い食券ボタン */
 .ticket-button-red {
   background: linear-gradient(
     180deg,
@@ -249,34 +258,21 @@ body {
 }
 
 /* ===========================
-   暖簾フレーム
+   ガラスモーフィズムパネル
    =========================== */
-.noren-frame {
-  position: relative;
-  padding: 24px 32px;
-  background: linear-gradient(
-    180deg,
-    var(--color-wood) 0%,
-    var(--color-wood-light) 100%
-  );
-  border: 3px solid #8D6E63;
-  border-radius: 8px;
-  box-shadow:
-    inset 0 2px 8px rgba(0, 0, 0, 0.3),
-    0 4px 16px rgba(0, 0, 0, 0.5);
+.glass-panel {
+  background: rgba(26, 26, 26, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 213, 79, 0.2);
+  border-radius: 12px;
 }
 
-.noren-frame::before {
-  content: '';
-  position: absolute;
-  top: -8px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 80%;
-  height: 16px;
-  background: var(--color-primary);
-  border-radius: 4px 4px 0 0;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+.glass-panel-dark {
+  background: rgba(26, 26, 26, 0.8);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 213, 79, 0.15);
 }
 
 /* ===========================
@@ -315,10 +311,85 @@ body {
   );
 }
 
-@utility text-wood {
-  color: var(--color-wood);
+/* ===========================
+   追加アニメーション
+   =========================== */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
 }
 
-@utility bg-wood {
-  background: var(--color-wood);
+@keyframes shimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(255, 213, 79, 0.3),
+                0 0 10px rgba(255, 213, 79, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(255, 213, 79, 0.5),
+                0 0 30px rgba(255, 213, 79, 0.3);
+  }
+}
+
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 213, 79, 0.3) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s linear infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-spin-slow {
+  animation: spin-slow 10s linear infinite;
+}
+
+/* ホバー時のエフェクト */
+.hover-lift {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* グラデーションボーダー */
+.gradient-border {
+  position: relative;
+  background: linear-gradient(var(--color-bg-dark), var(--color-bg-dark)) padding-box,
+              linear-gradient(135deg, var(--color-accent), var(--color-secondary)) border-box;
+  border: 2px solid transparent;
+  border-radius: 12px;
 }
