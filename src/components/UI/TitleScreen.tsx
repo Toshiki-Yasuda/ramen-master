@@ -26,18 +26,7 @@ const SteamEffect = () => (
 
 export const TitleScreen = ({ onStart }: TitleScreenProps) => {
   return (
-    <div className="relative flex min-h-screen overflow-hidden">
-      {/* 背景画像 */}
-      <div
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{
-          backgroundImage: 'url(/ramen-master/images/title.png)',
-        }}
-      />
-
-      {/* 暗めのオーバーレイ */}
-      <div className="absolute inset-0 bg-black/40" />
-
+    <div className="relative flex min-h-screen overflow-hidden bg-ramen-dark">
       {/* 3カラムレイアウト */}
       <div className="relative z-10 flex w-full min-h-screen">
         {/* 左サイドパネル */}
@@ -80,13 +69,23 @@ export const TitleScreen = ({ onStart }: TitleScreenProps) => {
         </SidePanel>
 
         {/* メインコンテンツ（中央） */}
-        <main className="flex-1 flex flex-col items-center justify-end pb-8 md:pb-12">
+        <main className="relative flex-1 flex flex-col items-center justify-end pb-8 md:pb-12 overflow-hidden">
+          {/* 背景画像（中央カラムのみ） */}
+          <div
+            className="absolute inset-0 bg-contain bg-center bg-no-repeat"
+            style={{
+              backgroundImage: 'url(/ramen-master/images/title.png)',
+            }}
+          />
+          {/* 暗めのオーバーレイ */}
+          <div className="absolute inset-0 bg-black/20" />
+
           {/* スペーサー（タイトル画像の上部を見せるため） */}
-          <div className="flex-1" />
+          <div className="relative z-10 flex-1" />
 
           {/* スタートボタン（食券風）- モバイル用 */}
           <motion.button
-            className="ticket-button ticket-button-red text-xl md:text-2xl lg:hidden"
+            className="relative z-10 ticket-button ticket-button-red text-xl md:text-2xl lg:hidden"
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
             whileHover={{ scale: 1.05 }}
@@ -99,7 +98,7 @@ export const TitleScreen = ({ onStart }: TitleScreenProps) => {
 
           {/* 開発中メッセージ */}
           <motion.p
-            className="mt-6 text-white/80 text-xs md:text-sm text-center max-w-md px-4 drop-shadow-lg"
+            className="relative z-10 mt-6 text-white/80 text-xs md:text-sm text-center max-w-md px-4 drop-shadow-lg"
             variants={fadeIn}
             initial="hidden"
             animate="visible"
@@ -110,7 +109,7 @@ export const TitleScreen = ({ onStart }: TitleScreenProps) => {
 
           {/* 画面下部の装飾 */}
           <motion.div
-            className="mt-4 flex gap-3 text-xl md:text-2xl opacity-70"
+            className="relative z-10 mt-4 flex gap-3 text-xl md:text-2xl opacity-70"
             initial={{ opacity: 0 }}
             animate={{ opacity: 0.7 }}
             transition={{ delay: 1.2 }}
