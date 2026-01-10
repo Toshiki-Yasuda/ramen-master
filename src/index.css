@@ -41,9 +41,22 @@
   --color-text-muted: rgba(255, 248, 225, 0.7);
 
   /* フォント */
-  font-family: 'Noto Sans JP', system-ui, -apple-system, sans-serif;
+  --font-heading: 'Zen Maru Gothic', 'Noto Sans JP', sans-serif;
+  --font-body: 'Noto Sans JP', system-ui, -apple-system, sans-serif;
+  --font-accent: 'Shippori Mincho', serif;
+
+  font-family: var(--font-body);
   line-height: 1.5;
   font-weight: 400;
+}
+
+/* フォントユーティリティ */
+.font-heading {
+  font-family: var(--font-heading);
+}
+
+.font-accent {
+  font-family: var(--font-accent);
 }
 
 /* ===========================

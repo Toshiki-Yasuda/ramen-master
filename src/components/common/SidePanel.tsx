@@ -62,7 +62,7 @@ export const SidePanelSection = ({
       transition={{ duration: 0.4 }}
     >
       {title && (
-        <h3 className="text-ramen-gold text-xs font-bold mb-4 tracking-widest uppercase flex items-center gap-2">
+        <h3 className="text-ramen-gold text-xs font-bold mb-4 tracking-widest uppercase flex items-center gap-2 font-heading">
           <span className="w-1 h-4 bg-gradient-to-b from-ramen-gold to-ramen-orange rounded-full" />
           {title}
         </h3>
@@ -74,7 +74,7 @@ export const SidePanelSection = ({
 
 // メニューアイテム
 interface MenuItemProps {
-  icon?: string;
+  icon?: ReactNode;
   label: string;
   onClick?: () => void;
   active?: boolean;
@@ -90,7 +90,7 @@ export const MenuItem = ({
 }: MenuItemProps) => {
   return (
     <motion.button
-      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all
+      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all font-heading
                   ${active
                     ? 'bg-gradient-to-r from-ramen-gold/25 to-ramen-orange/15 text-ramen-gold border border-ramen-gold/50 shadow-lg shadow-ramen-gold/10'
                     : 'text-ramen-cream/80 hover:bg-ramen-gold/10 hover:text-ramen-gold border border-transparent'}
@@ -100,7 +100,7 @@ export const MenuItem = ({
       onClick={disabled ? undefined : onClick}
       disabled={disabled}
     >
-      {icon && <span className="text-xl drop-shadow-sm">{icon}</span>}
+      {icon && <span className="w-5 h-5 flex-shrink-0">{icon}</span>}
       <span className="font-medium tracking-wide">{label}</span>
       {active && (
         <motion.div
@@ -120,7 +120,7 @@ export const MenuItem = ({
 interface InfoItemProps {
   label: string;
   value: string | number;
-  icon?: string;
+  icon?: ReactNode;
 }
 
 export const InfoItem = ({ label, value, icon }: InfoItemProps) => {
@@ -132,11 +132,11 @@ export const InfoItem = ({ label, value, icon }: InfoItemProps) => {
       whileHover={{ x: 4 }}
       transition={{ duration: 0.2 }}
     >
-      <span className="text-ramen-cream/70 text-sm flex items-center gap-2">
-        {icon && <span className="text-base">{icon}</span>}
+      <span className="text-ramen-cream/70 text-sm flex items-center gap-2 font-heading">
+        {icon && <span className="w-4 h-4">{icon}</span>}
         {label}
       </span>
-      <span className="text-ramen-gold font-bold text-lg tracking-wider">{value}</span>
+      <span className="text-ramen-gold font-bold text-lg tracking-wider font-heading">{value}</span>
     </motion.div>
   );
 };
