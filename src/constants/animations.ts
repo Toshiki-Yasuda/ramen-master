@@ -66,7 +66,7 @@ export const buttonVariants: Variants = {
 // 回転アニメーション（ローディング用）
 export const spinAnimation = {
   rotate: 360,
-  transition: { duration: 1, repeat: Infinity, ease: 'linear' },
+  transition: { duration: 1, repeat: Infinity, ease: 'linear' as const },
 };
 
 // カオスイベント用アニメーション
