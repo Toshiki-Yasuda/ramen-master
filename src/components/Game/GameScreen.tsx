@@ -30,6 +30,7 @@ import {
   SidePanelSection,
   InfoItem,
   LanternDecoration,
+  SteamEffect,
 } from '../common';
 
 interface GameScreenProps {
@@ -37,15 +38,6 @@ interface GameScreenProps {
   onBack: () => void;
   onResult: (score: ReturnType<typeof useGameState>['getScoreData']) => void;
 }
-
-// 湯気コンポーネント
-const SteamEffect = () => (
-  <div className="steam-container">
-    <div className="steam" />
-    <div className="steam" />
-    <div className="steam" />
-  </div>
-);
 
 // コンボ表示
 const ComboDisplay = ({ combo }: { combo: number }) => {
@@ -512,6 +504,8 @@ export const GameScreen = ({ beatmap, onBack, onResult }: GameScreenProps) => {
               <button
                 className="p-2 rounded-full bg-ramen-brown/30 hover:bg-ramen-brown/50 transition-colors"
                 onClick={toggleMute}
+                aria-label={isMuted ? "音声をオンにする" : "音声をミュートする"}
+                aria-pressed={isMuted}
               >
                 {isMuted ? (
                   <VolumeX className="w-5 h-5 text-ramen-cream" />
@@ -522,6 +516,7 @@ export const GameScreen = ({ beatmap, onBack, onResult }: GameScreenProps) => {
               <button
                 className="p-2 rounded-full bg-ramen-brown/30 hover:bg-ramen-brown/50 transition-colors"
                 onClick={onBack}
+                aria-label="タイトル画面に戻る"
               >
                 <Home className="w-5 h-5 text-ramen-cream" />
               </button>
@@ -531,7 +526,7 @@ export const GameScreen = ({ beatmap, onBack, onResult }: GameScreenProps) => {
       </div>
 
       {/* 湯気エフェクト */}
-      <SteamEffect />
+      <SteamEffect particleCount={3} />
     </div>
   );
 };

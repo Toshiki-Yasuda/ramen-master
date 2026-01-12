@@ -50,11 +50,3 @@ export const DEFAULT_GAME_CONFIG = {
   audioOffset: 0,
   videoOffset: 0,
 } as const;
-
-// アニメーション時間（ms）
-export const ANIMATION_DURATION = {
-  SHORT: 200,
-  MEDIUM: 300,
-  LONG: 500,
-  EXTRA_LONG: 800,
-} as const;

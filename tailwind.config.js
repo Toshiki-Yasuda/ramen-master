@@ -6,16 +6,6 @@ export default {
   ],
   theme: {
     extend: {
-      colors: {
-        // ラーメン屋のテーマカラー
-        ramen: {
-          broth: '#E8C872', // 豚骨スープ色
-          noodle: '#F5E6B3', // 麺色
-          nori: '#2D4A3E', // 海苔色
-          egg: '#FFD93D', // 卵黄色
-          chashu: '#8B4513', // チャーシュー色
-        }
-      },
       animation: {
         'bounce-slow': 'bounce 2s infinite',
         'pulse-fast': 'pulse 0.5s infinite',
