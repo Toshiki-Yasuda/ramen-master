@@ -3,7 +3,7 @@
   "title": "サンプル曲",
   "artist": "テスト",
   "bpm": 120,
-  "offset": 0.5,
+  "offset": 0,
   "difficulty": {
     "easy": 2,
     "normal": 4,
@@ -11,12 +11,12 @@
   },
   "notes": [
     { "id": "n1", "time": 1.0, "type": "tap" },
-    { "id": "n2", "time": 1.5, "type": "tap" },
-    { "id": "n3", "time": 2.0, "type": "tap" },
-    { "id": "n4", "time": 2.5, "type": "tap" },
-    { "id": "n5", "time": 3.0, "type": "tap" },
-    { "id": "n6", "time": 3.5, "type": "tap" },
-    { "id": "n7", "time": 4.0, "type": "tap" },
-    { "id": "n8", "time": 4.5, "type": "tap" }
+    { "id": "n2", "time": 2.0, "type": "tap" },
+    { "id": "n3", "time": 3.0, "type": "tap" },
+    { "id": "n4", "time": 4.0, "type": "tap" },
+    { "id": "n5", "time": 5.0, "type": "tap" },
+    { "id": "n6", "time": 6.0, "type": "tap" },
+    { "id": "n7", "time": 7.0, "type": "tap" },
+    { "id": "n8", "time": 8.0, "type": "tap" }
   ]
 }
