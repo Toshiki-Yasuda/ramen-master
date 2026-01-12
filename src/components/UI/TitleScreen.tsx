@@ -15,23 +15,12 @@ import {
   MenuItem,
   InfoItem,
   LanternDecoration,
+  SteamEffect,
 } from '../common';
 
 interface TitleScreenProps {
   onStart: () => void;
 }
-
-// 湯気コンポーネント
-const SteamEffect = () => (
-  <div className="steam-container">
-    <div className="steam" />
-    <div className="steam" />
-    <div className="steam" />
-    <div className="steam" />
-    <div className="steam" />
-    <div className="steam" />
-  </div>
-);
 
 export const TitleScreen = ({ onStart }: TitleScreenProps) => {
   return (
@@ -83,7 +72,7 @@ export const TitleScreen = ({ onStart }: TitleScreenProps) => {
           <div
             className="absolute inset-0 bg-contain bg-center bg-no-repeat"
             style={{
-              backgroundImage: 'url(/ramen-master/images/title.png)',
+              backgroundImage: `url(${import.meta.env.BASE_URL}images/title.png)`,
             }}
           />
           {/* 暗めのオーバーレイ */}

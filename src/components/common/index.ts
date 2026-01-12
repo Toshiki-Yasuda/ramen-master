@@ -5,3 +5,4 @@ export {
   InfoItem,
   LanternDecoration,
 } from './SidePanel';
+export { SteamEffect } from './SteamEffect';

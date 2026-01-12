@@ -3,18 +3,8 @@ import { motion } from 'framer-motion';
 import type { GameState, Beatmap, ScoreData } from './types';
 import { TitleScreen, LoadingScreen } from './components/UI';
 import { GameScreen } from './components/Game';
+import { SteamEffect } from './components/common';
 import { Home, RotateCcw, Trophy, Target } from 'lucide-react';
-
-// 湯気コンポーネント
-const SteamEffect = () => (
-  <div className="steam-container">
-    <div className="steam" />
-    <div className="steam" />
-    <div className="steam" />
-    <div className="steam" />
-    <div className="steam" />
-  </div>
-);
 
 // リザルト画面
 const ResultScreen = ({
@@ -118,7 +108,7 @@ const ResultScreen = ({
         </button>
       </motion.div>
 
-      <SteamEffect />
+      <SteamEffect particleCount={5} />
     </div>
   );
 };
@@ -167,7 +157,7 @@ function App() {
   // 譜面を読み込み
   const loadBeatmap = useCallback(async () => {
     try {
-      const response = await fetch('/ramen-master/beatmaps/sample.json');
+      const response = await fetch(`${import.meta.env.BASE_URL}beatmaps/sample.json`);
       const data = await response.json();
       setBeatmap(data);
       return true;

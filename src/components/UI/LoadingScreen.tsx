@@ -1,20 +1,10 @@
 import { motion } from 'framer-motion';
+import { SteamEffect } from '../common';
 
 interface LoadingScreenProps {
   onBack?: () => void;
   message?: string;
 }
-
-// 湯気コンポーネント
-const SteamEffect = () => (
-  <div className="steam-container">
-    <div className="steam" />
-    <div className="steam" />
-    <div className="steam" />
-    <div className="steam" />
-    <div className="steam" />
-  </div>
-);
 
 export const LoadingScreen = ({
   onBack,
@@ -95,7 +85,7 @@ export const LoadingScreen = ({
       )}
 
       {/* 湯気エフェクト */}
-      <SteamEffect />
+      <SteamEffect particleCount={5} />
     </div>
   );
 };
