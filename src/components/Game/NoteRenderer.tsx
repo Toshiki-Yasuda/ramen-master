@@ -32,19 +32,19 @@ const NOTE_STYLES = {
     bg: 'bg-gradient-to-br from-ramen-gold to-ramen-orange',
     border: 'border-ramen-cream',
     shadow: 'shadow-ramen-orange/50',
-    size: 'w-16 h-16 md:w-20 md:h-20',
+    size: 'w-14 h-14 sm:w-16 sm:h-16 md:w-18 md:h-18 lg:w-20 lg:h-20 xl:w-24 xl:h-24',
   },
   hold: {
     bg: 'bg-gradient-to-br from-green-400 to-emerald-500',
     border: 'border-green-200',
     shadow: 'shadow-green-500/50',
-    size: 'w-16 h-16 md:w-20 md:h-20',
+    size: 'w-14 h-14 sm:w-16 sm:h-16 md:w-18 md:h-18 lg:w-20 lg:h-20 xl:w-24 xl:h-24',
   },
   yukigiri_combo: {
     bg: 'bg-gradient-to-br from-purple-400 to-pink-500',
     border: 'border-purple-200',
     shadow: 'shadow-purple-500/50',
-    size: 'w-20 h-20 md:w-24 md:h-24',
+    size: 'w-18 h-18 sm:w-20 sm:h-20 md:w-22 md:h-22 lg:w-24 lg:h-24 xl:w-28 xl:h-28',
   },
 } as const;
 
@@ -71,8 +71,8 @@ export const NoteRenderer = ({
       if (!note.isHit) {
         return timeDiff >= -lookBehind && timeDiff <= lookAhead;
       }
-      // ヒット後のエフェクト表示（0.2秒間）
-      return timeDiff >= -0.3 && timeDiff <= 0;
+      // ヒット後のエフェクト表示（0.8秒間）
+      return timeDiff >= -0.8 && timeDiff <= 0;
     });
   }, [notes, currentTime, lookAhead, lookBehind]);
 
@@ -80,7 +80,7 @@ export const NoteRenderer = ({
     <div className="absolute inset-0 overflow-hidden">
       {/* 判定ライン */}
       <div
-        className="absolute left-0 right-0 h-2 bg-gradient-to-r from-transparent via-ramen-gold to-transparent"
+        className="absolute left-0 right-0 h-4 bg-gradient-to-r from-transparent via-ramen-gold to-transparent shadow-lg shadow-ramen-gold/50"
         style={{ top: `${judgmentLinePosition * 100}%` }}
       >
         {/* 判定ライン中央のハイライト */}

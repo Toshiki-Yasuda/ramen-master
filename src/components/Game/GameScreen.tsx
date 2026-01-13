@@ -39,26 +39,6 @@ interface GameScreenProps {
   onResult: (score: ReturnType<typeof useGameState>['getScoreData']) => void;
 }
 
-// コンボ表示
-const ComboDisplay = ({ combo }: { combo: number }) => {
-  if (combo < 5) return null;
-
-  return (
-    <motion.div
-      key={combo}
-      className="absolute top-1/4 left-1/2 -translate-x-1/2 text-center pointer-events-none"
-      initial={{ scale: 1.2, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
-      transition={{ duration: 0.1 }}
-    >
-      <div className="text-5xl md:text-6xl font-heading font-bold text-ramen-gold drop-shadow-lg">
-        {combo}
-      </div>
-      <div className="text-lg text-ramen-cream/80 font-heading">COMBO</div>
-    </motion.div>
-  );
-};
-
 export const GameScreen = ({ beatmap, onBack, onResult }: GameScreenProps) => {
   // ゲーム状態
   const [isPlaying, setIsPlaying] = useState(false);
@@ -67,16 +47,12 @@ export const GameScreen = ({ beatmap, onBack, onResult }: GameScreenProps) => {
   const [countdown, setCountdown] = useState<number | null>(null);
   const [isMuted, setIsMuted] = useState(false);
 
-  // 現在時刻（描画用） - refで同期的に更新、stateは再描画トリガー用
-  const [, setRenderTrigger] = useState(0);
+  // 現在時刻（描画用） - refで同期的に更新
   const displayTimeRef = useRef(0);
 
   // Refs
   const hasStartedRef = useRef(false);
   const processedMissIdsRef = useRef<Set<string>>(new Set());
-
-  // 入力キュー - 入力時刻を記録してゲームループで処理
-  const inputQueueRef = useRef<number[]>([]);
 
   // Refs for tracking state changes
   const prevComboRef = useRef(0);
@@ -95,28 +71,6 @@ export const GameScreen = ({ beatmap, onBack, onResult }: GameScreenProps) => {
 
       // 表示用時刻を同期的に更新（refで遅延なし）
       displayTimeRef.current = audioTime;
-      // 再描画をトリガー
-      setRenderTrigger((prev) => prev + 1);
-
-      // 入力キューの処理 - キューに溜まった入力を統一時刻で判定
-      while (inputQueueRef.current.length > 0) {
-        const inputTime = inputQueueRef.current.shift()!;
-        const unjudgedNotes = gameState.getUnjudgedNotes();
-
-        // 判定（入力時刻を使用）
-        const result = judgment.judgeNearestNote(inputTime, unjudgedNotes);
-
-        if (result) {
-          const [judgmentResult, localIndex] = result;
-          const note = unjudgedNotes[localIndex];
-          const originalIndex = gameState.notes.findIndex((n) => n.id === note.id);
-          if (originalIndex !== -1) {
-            gameState.recordJudgment(originalIndex, judgmentResult);
-            // 判定音を再生
-            soundEffects.playJudgment(judgmentResult.judgment);
-          }
-        }
-      }
 
       // MISS判定チェック
       const unjudgedNotes = gameState.getUnjudgedNotes();
@@ -178,17 +132,33 @@ export const GameScreen = ({ beatmap, onBack, onResult }: GameScreenProps) => {
     prevRamenLevelRef.current = gameState.ramenLevel;
   }, [gameState.ramenLevel, soundEffects]);
 
-  // キー入力ハンドラ - 入力時刻をキューに追加
+  // 入力を即座に処理する関数
+  const processInput = useCallback((inputTime: number) => {
+    const unjudgedNotes = gameState.getUnjudgedNotes();
+    const result = judgment.judgeNearestNote(inputTime, unjudgedNotes);
+
+    if (result) {
+      const [judgmentResult, localIndex] = result;
+      const note = unjudgedNotes[localIndex];
+      const originalIndex = gameState.notes.findIndex((n) => n.id === note.id);
+      if (originalIndex !== -1) {
+        gameState.recordJudgment(originalIndex, judgmentResult);
+        soundEffects.playJudgment(judgmentResult.judgment);
+      }
+    }
+  }, [gameState, judgment, soundEffects]);
+
+  // キー入力ハンドラ - 入力を即座に処理
   const handleInput = useCallback(() => {
     if (!isPlaying || isPaused) return;
 
     // タップ音は即座に再生（フィードバック）
     soundEffects.playTap();
 
-    // 入力時刻をキューに追加（ゲームループで処理）
+    // 入力を即座に処理（レイテンシー削減）
     const inputTime = Tone.Transport.seconds;
-    inputQueueRef.current.push(inputTime);
-  }, [isPlaying, isPaused, soundEffects]);
+    processInput(inputTime);
+  }, [isPlaying, isPaused, soundEffects, processInput]);
 
   // キーボード/タッチ入力のセットアップ
   useEffect(() => {
@@ -234,7 +204,6 @@ export const GameScreen = ({ beatmap, onBack, onResult }: GameScreenProps) => {
     soundEffects.playGameStart();
     hasStartedRef.current = false;
     processedMissIdsRef.current.clear();
-    inputQueueRef.current = [];
     prevComboRef.current = 0;
     prevRamenLevelRef.current = 0;
     setIsPlaying(true);
@@ -242,15 +211,27 @@ export const GameScreen = ({ beatmap, onBack, onResult }: GameScreenProps) => {
   }, [transport, beatmap.offset, soundEffects]);
 
   // ポーズ切り替え
-  const togglePause = useCallback(() => {
+  const togglePause = useCallback(async () => {
     if (isPaused) {
+      // ポーズ解除時は3-2-1カウントダウン
+      setCountdown(3);
+      soundEffects.playCountdown(3);
+      await new Promise((r) => setTimeout(r, 1000));
+      setCountdown(2);
+      soundEffects.playCountdown(2);
+      await new Promise((r) => setTimeout(r, 1000));
+      setCountdown(1);
+      soundEffects.playCountdown(1);
+      await new Promise((r) => setTimeout(r, 1000));
+      setCountdown(null);
+
       transport.resume();
       setIsPaused(false);
     } else {
       transport.pause();
       setIsPaused(true);
     }
-  }, [isPaused, transport]);
+  }, [isPaused, transport, soundEffects]);
 
   // リトライ
   const retry = useCallback(() => {
@@ -260,7 +241,6 @@ export const GameScreen = ({ beatmap, onBack, onResult }: GameScreenProps) => {
     setIsPaused(false);
     hasStartedRef.current = false;
     processedMissIdsRef.current.clear();
-    inputQueueRef.current = [];
     displayTimeRef.current = 0;
     startGame();
   }, [transport, gameState, beatmap, startGame]);
@@ -286,14 +266,9 @@ export const GameScreen = ({ beatmap, onBack, onResult }: GameScreenProps) => {
 
           <SidePanelSection title="スコア">
             <div className="text-center">
-              <motion.div
-                key={gameState.score}
-                className="text-3xl font-heading font-bold text-ramen-gold"
-                initial={{ scale: 1.1 }}
-                animate={{ scale: 1 }}
-              >
+              <div className="text-3xl font-heading font-bold text-ramen-gold transition-all duration-100">
                 {gameState.score.toLocaleString()}
-              </motion.div>
+              </div>
             </div>
           </SidePanelSection>
 
@@ -360,21 +335,55 @@ export const GameScreen = ({ beatmap, onBack, onResult }: GameScreenProps) => {
               notes={gameState.notes}
               currentTime={displayTimeRef.current}
               lookAhead={2.5}
-              lookBehind={0.3}
+              lookBehind={0.8}
               judgmentLinePosition={0.8}
             />
 
             {/* 判定表示 */}
             <JudgmentDisplay result={gameState.lastJudgment} />
 
-            {/* コンボ表示 */}
-            <ComboDisplay combo={gameState.combo} />
+            {/* モバイル用統計オーバーレイ（サイドパネル非表示時） */}
+            <div className="lg:hidden absolute top-4 left-0 right-0 flex justify-between px-4 pointer-events-none">
+              {/* 左: スコア */}
+              <div className="glass-panel-dark px-3 py-2 rounded-lg">
+                <div className="text-xs text-ramen-cream/60 font-heading">SCORE</div>
+                <div className="text-lg font-heading font-bold text-ramen-gold">
+                  {gameState.score.toLocaleString()}
+                </div>
+              </div>
+
+              {/* 右: 精度 */}
+              <div className="glass-panel-dark px-3 py-2 rounded-lg">
+                <div className="text-xs text-ramen-cream/60 font-heading">精度</div>
+                <div className="text-lg font-heading text-ramen-cream">
+                  {gameState.accuracy.toFixed(1)}%
+                </div>
+              </div>
+            </div>
+
+            {/* モバイル用コンボ表示（サイドパネル非表示時） */}
+            <div className="lg:hidden absolute bottom-16 left-1/2 -translate-x-1/2 pointer-events-none">
+              {gameState.combo >= 5 && (
+                <motion.div
+                  key={gameState.combo}
+                  className="text-center"
+                  initial={{ scale: 1.2, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ duration: 0.1 }}
+                >
+                  <div className="text-3xl font-heading font-bold text-ramen-gold drop-shadow-lg">
+                    {gameState.combo}
+                  </div>
+                  <div className="text-xs text-ramen-cream/80 font-heading">COMBO</div>
+                </motion.div>
+              )}
+            </div>
           </div>
 
           {/* プログレスバー */}
-          <div className="absolute bottom-0 left-0 right-0 h-1 bg-ramen-dark/50">
+          <div className="absolute bottom-0 left-0 right-0 h-2 bg-ramen-dark/80 z-20">
             <motion.div
-              className="h-full bg-gradient-to-r from-ramen-gold to-ramen-orange"
+              className="h-full bg-gradient-to-r from-ramen-gold to-ramen-orange shadow-lg shadow-ramen-gold/50"
               initial={{ width: 0 }}
               animate={{ width: `${progressPercent}%` }}
             />
@@ -412,8 +421,12 @@ export const GameScreen = ({ beatmap, onBack, onResult }: GameScreenProps) => {
               <h2 className="text-3xl md:text-4xl font-heading text-ramen-cream mb-4">
                 {beatmap.title}
               </h2>
-              <p className="text-ramen-cream/70 mb-8">
-                タップまたはスペースキーでプレイ
+              <p className="text-ramen-cream/70 mb-8 text-center">
+                タップまたはキーボードでプレイ
+                <br />
+                <span className="text-sm text-ramen-gold/80">
+                  ( Space / F / J / Enter )
+                </span>
               </p>
               <button
                 className="ticket-button ticket-button-red text-xl"
@@ -526,7 +539,7 @@ export const GameScreen = ({ beatmap, onBack, onResult }: GameScreenProps) => {
       </div>
 
       {/* 湯気エフェクト */}
-      <SteamEffect particleCount={3} />
+      <SteamEffect particleCount={8} />
     </div>
   );
 };
