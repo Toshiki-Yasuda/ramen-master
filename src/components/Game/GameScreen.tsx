@@ -39,6 +39,26 @@ interface GameScreenProps {
   onResult: (score: ReturnType<typeof useGameState>['getScoreData']) => void;
 }
 
+// コンボ表示
+const ComboDisplay = ({ combo }: { combo: number }) => {
+  if (combo < 5) return null;
+
+  return (
+    <motion.div
+      key={combo}
+      className="absolute top-8 left-8 text-left pointer-events-none"
+      initial={{ scale: 1.2, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      transition={{ duration: 0.1 }}
+    >
+      <div className="text-5xl md:text-6xl font-heading font-bold text-ramen-gold drop-shadow-lg">
+        {combo}
+      </div>
+      <div className="text-lg text-ramen-cream/80 font-heading">COMBO</div>
+    </motion.div>
+  );
+};
+
 export const GameScreen = ({ beatmap, onBack, onResult }: GameScreenProps) => {
   // ゲーム状態
   const [isPlaying, setIsPlaying] = useState(false);
@@ -335,8 +355,8 @@ export const GameScreen = ({ beatmap, onBack, onResult }: GameScreenProps) => {
               notes={gameState.notes}
               currentTime={displayTimeRef.current}
               lookAhead={2.5}
-              lookBehind={0.8}
-              judgmentLinePosition={0.8}
+              lookBehind={0.3}
+              judgmentLinePosition={0.15}
             />
 
             {/* 判定表示 */}

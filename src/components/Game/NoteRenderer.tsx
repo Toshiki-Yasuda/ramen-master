@@ -80,28 +80,42 @@ export const NoteRenderer = ({
     <div className="absolute inset-0 overflow-hidden">
       {/* 判定ライン */}
       <div
-        className="absolute left-0 right-0 h-4 bg-gradient-to-r from-transparent via-ramen-gold to-transparent shadow-lg shadow-ramen-gold/50"
-        style={{ top: `${judgmentLinePosition * 100}%` }}
+        className="absolute top-0 bottom-0 w-4 bg-gradient-to-b from-transparent via-ramen-gold to-transparent animate-judgment-pulse"
+        style={{ left: `${judgmentLinePosition * 100}%` }}
       >
         {/* 判定ライン中央のハイライト */}
-        <div className="absolute left-1/2 -translate-x-1/2 w-24 h-full bg-white/30 blur-sm" />
+        <div className="absolute top-1/2 -translate-y-1/2 h-24 w-full bg-white/30 blur-sm" />
       </div>
 
       {/* 判定エリア表示 */}
       <div
-        className="absolute left-1/2 -translate-x-1/2 w-24 h-24 md:w-28 md:h-28 rounded-full border-4 border-ramen-gold/30 bg-ramen-gold/5"
+        className="absolute top-1/2 -translate-y-1/2 w-24 h-24 md:w-28 md:h-28 rounded-full border-4 border-ramen-gold/30 bg-ramen-gold/5"
         style={{
-          top: `${judgmentLinePosition * 100}%`,
+          left: `${judgmentLinePosition * 100}%`,
           transform: 'translate(-50%, -50%)',
         }}
       />
 
+      {/* レーンガイドライン（3レーン） */}
+      {[35, 50, 65].map((lanePercent) => (
+        <div
+          key={lanePercent}
+          className="absolute left-0 right-0 h-px bg-white/10"
+          style={{ top: `${lanePercent}%` }}
+        />
+      ))}
+
       {/* ノーツ */}
       {visibleNotes.map((note) => {
         const timeDiff = note.time - currentTime;
-        // 位置計算: timeDiff = lookAheadのとき上(0%)、timeDiff = 0のとき判定ライン位置
+        // 位置計算: timeDiff = lookAheadのとき右端(100%)、timeDiff = 0のとき判定ライン位置(15%)
         const progress = 1 - timeDiff / lookAhead;
-        const topPercent = progress * judgmentLinePosition * 100;
+        const rightPercent = 100 - (progress * (100 - judgmentLinePosition * 100));
+
+        // レーン位置計算（3レーン: 35%, 50%, 65%）
+        const lanePositions = [35, 50, 65];
+        const laneIndex = note.lane ?? 1; // デフォルトは中央レーン
+        const topPercent = lanePositions[laneIndex] || 50;
 
         const style = NOTE_STYLES[note.type] || NOTE_STYLES.tap;
         const isHit = note.isHit;
@@ -111,13 +125,16 @@ export const NoteRenderer = ({
           <motion.div
             key={note.id}
             className={`
-              absolute left-1/2 -translate-x-1/2 -translate-y-1/2
+              absolute -translate-x-1/2 -translate-y-1/2
               ${style.size} rounded-full
               ${isHit ? hitEffect : `${style.bg} border-2 ${style.border} shadow-lg ${style.shadow}`}
               flex items-center justify-center
               transition-all duration-150
             `}
-            style={{ top: `${Math.min(100, Math.max(0, topPercent))}%` }}
+            style={{
+              right: `${Math.min(100, Math.max(0, rightPercent))}%`,
+              top: `${topPercent}%`,
+            }}
             initial={!isHit ? { scale: 0.8, opacity: 0 } : undefined}
             animate={
               isHit
@@ -140,7 +157,7 @@ export const NoteRenderer = ({
 
       {/* 中央ガイドライン（薄く表示） */}
       <div
-        className="absolute left-1/2 w-0.5 h-full bg-gradient-to-b from-transparent via-white/10 to-transparent -translate-x-1/2"
+        className="absolute top-1/2 h-0.5 w-full bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-y-1/2 animate-horizontal-flow"
       />
     </div>
   );
