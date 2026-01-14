@@ -58,10 +58,10 @@ export const JudgmentDisplay = ({ result }: JudgmentDisplayProps) => {
     <AnimatePresence mode="wait">
       <motion.div
         key={`${result.judgment}-${result.timeDiff}-${Date.now()}`}
-        className="absolute inset-x-0 top-1/3 flex flex-col items-center justify-center pointer-events-none"
-        initial={{ opacity: 0, scale: 0.5, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.8, y: -20 }}
+        className="absolute left-1/4 top-1/2 -translate-y-1/2 flex flex-col items-center justify-center pointer-events-none"
+        initial={{ opacity: 0, scale: 0.5, x: -20 }}
+        animate={{ opacity: 1, scale: 1, x: 0 }}
+        exit={{ opacity: 0, scale: 0.8, x: -20 }}
         transition={{ duration: 0.15, ease: 'easeOut' }}
       >
         {/* 判定テキスト */}

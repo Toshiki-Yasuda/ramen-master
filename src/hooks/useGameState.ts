@@ -9,7 +9,7 @@
  * - カオスイベント
  */
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import type { Note, Beatmap, ScoreData } from '../types';
 import { RAMEN_COMBO_THRESHOLDS } from '../constants';
 import type { DetailedJudgmentResult } from './useJudgment';
@@ -68,6 +68,9 @@ export const useGameState = () => {
   // 最後の判定結果（表示用）
   const [lastJudgment, setLastJudgment] = useState<DetailedJudgmentResult | null>(null);
 
+  // 判定表示タイマー（自動クリア用）
+  const judgmentTimerRef = useRef<number | null>(null);
+
   /**
    * ゲームを初期化
    */
@@ -94,6 +97,12 @@ export const useGameState = () => {
       currentChaosEvent: null,
     });
     setLastJudgment(null);
+
+    // 判定タイマーをクリア
+    if (judgmentTimerRef.current) {
+      clearTimeout(judgmentTimerRef.current);
+      judgmentTimerRef.current = null;
+    }
   }, []);
 
   // RAMEN_COMBO_THRESHOLDSの値を配列化
@@ -119,14 +128,12 @@ export const useGameState = () => {
    */
   const recordJudgment = useCallback(
     (noteIndex: number, result: DetailedJudgmentResult) => {
-      // ノーツの状態を更新
-      setNotes((prev) =>
-        prev.map((note, index) =>
-          index === noteIndex
-            ? { ...note, isHit: true, result }
-            : note
-        )
-      );
+      // ノーツの状態を更新（効率的なimmutable更新）
+      setNotes((prev) => {
+        const newNotes = [...prev];
+        newNotes[noteIndex] = { ...prev[noteIndex], isHit: true, result };
+        return newNotes;
+      });
 
       // ゲーム状態を更新
       setState((prev) => {
@@ -157,8 +164,18 @@ export const useGameState = () => {
         };
       });
 
-      // 最後の判定を保存
+      // 最後の判定を保存（800ms後に自動クリア）
       setLastJudgment(result);
+
+      // 既存のタイマーをクリア
+      if (judgmentTimerRef.current) {
+        clearTimeout(judgmentTimerRef.current);
+      }
+
+      // 800ms後に判定表示をクリア
+      judgmentTimerRef.current = window.setTimeout(() => {
+        setLastJudgment(null);
+      }, 800);
     },
     [calculateRamenLevel]
   );

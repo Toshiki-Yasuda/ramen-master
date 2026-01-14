@@ -159,7 +159,15 @@ function App() {
     try {
       const response = await fetch(`${import.meta.env.BASE_URL}beatmaps/sample.json`);
       const data = await response.json();
-      setBeatmap(data);
+
+      // レーン割り当て（ローテーション方式）
+      // 3レーン: 0=35%, 1=50%, 2=65% (垂直位置)
+      const notesWithLanes = data.notes.map((note: any, index: number) => ({
+        ...note,
+        lane: index % 3, // 0, 1, 2のローテーション
+      }));
+
+      setBeatmap({ ...data, notes: notesWithLanes });
       return true;
     } catch (error) {
       console.error('Failed to load beatmap:', error);
