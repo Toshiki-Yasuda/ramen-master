@@ -79,7 +79,7 @@ export const GameScreen = ({ beatmap, onBack, onResult }: GameScreenProps) => {
     return unjudged.find(
       (oilCut) =>
         oilCut.time >= currentTime &&
-        oilCut.time <= currentTime + 0.2
+        oilCut.time <= currentTime + 0.5  // 表示期間を0.5秒に延長
     );
   }, [getUnjudgedOilCuts]);
 
@@ -235,9 +235,9 @@ export const GameScreen = ({ beatmap, onBack, onResult }: GameScreenProps) => {
 
         {/* 油切りチャンス表示 */}
         <OilCutChanceDisplay
-          isActive={nextOilCut !== undefined && nextOilCut.time - displayTimeRef.current <= 0.2}
+          isActive={nextOilCut !== undefined && nextOilCut.time - displayTimeRef.current <= 0.5}
           timeRemaining={timeToNextOilCut}
-          windowSize={200}
+          windowSize={500}
         />
 
         {/* カオスイベント表示 */}
