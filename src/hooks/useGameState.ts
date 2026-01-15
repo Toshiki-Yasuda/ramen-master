@@ -76,7 +76,7 @@ export const useGameState = () => {
    */
   const initialize = useCallback((beatmap: Beatmap) => {
     // ノーツを初期化
-    const initialNotes: NoteState[] = beatmap.notes.map((note) => ({
+    const initialNotes: NoteState[] = (beatmap.notes || []).map((note) => ({
       ...note,
       isHit: false,
     }));
@@ -91,7 +91,7 @@ export const useGameState = () => {
       goodCount: 0,
       missCount: 0,
       notesHit: 0,
-      totalNotes: beatmap.notes.length,
+      totalNotes: (beatmap.notes || []).length,
       ramenLevel: 0,
       chaosEventActive: false,
       currentChaosEvent: null,

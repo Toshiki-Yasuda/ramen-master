@@ -1,14 +1,24 @@
 {
   "songId": "sample",
-  "title": "サンプル曲",
+  "title": "湯切りますたー",
   "artist": "テスト",
   "bpm": 120,
   "offset": 0,
+  "duration": 12,
   "difficulty": {
     "easy": 2,
     "normal": 4,
     "hard": 6
   },
+  "oilCutChances": [
+    { "id": "oil_1", "time": 2.5 },
+    { "id": "oil_2", "time": 3.0 },
+    { "id": "oil_3", "time": 3.5 },
+    { "id": "oil_4", "time": 4.0 },
+    { "id": "oil_5", "time": 4.5 },
+    { "id": "oil_6", "time": 5.0 },
+    { "id": "oil_7", "time": 5.5 }
+  ],
   "notes": [
     { "id": "n1", "time": 1.0, "type": "tap" },
     { "id": "n2", "time": 2.0, "type": "tap" },
