@@ -17,3 +17,8 @@ export { useGameState } from './useGameState';
 
 // 効果音
 export { useSoundEffects } from './useSoundEffects';
+
+// 新しいゲーム実装用 Hooks
+export { useGamePlayState } from './useGamePlayState';
+export { useOilCutJudgment } from './useOilCutJudgment';
+export { useChaosEventTrigger } from './useChaosEventTrigger';

@@ -8,17 +8,36 @@ export interface JudgmentResult {
   delta: number; // タイミングのずれ（ms）
 }
 
+// 油切りチャンスデータ
+export interface OilCutChance {
+  id: string;
+  time: number; // 秒
+  isHit?: boolean;
+  judgment?: Judgment;
+}
+
+// 調理段階
+export type CookingPhase = 'soup' | 'oil_cut' | 'noodles' | 'topping' | 'complete';
+
+// 調理段階設定
+export interface CookingStageConfig {
+  phase: CookingPhase;
+  startTime: number;
+  endTime: number;
+  description: string;
+}
+
 // ノーツの種類
 export type NoteType = 'tap' | 'hold' | 'yukigiri_combo';
 
-// ノーツデータ
+// ノーツデータ（旧システム用、互換性のため保持）
 export interface Note {
   id: string;
   time: number; // 秒
   type: NoteType;
-  lane?: number; // 将来の拡張用
-  duration?: number; // holdノーツ用
-  pattern?: number[]; // コンボノーツ用
+  lane?: number;
+  duration?: number;
+  pattern?: number[];
   isHit?: boolean;
   judgment?: Judgment;
 }
@@ -30,12 +49,15 @@ export interface Beatmap {
   artist?: string;
   bpm: number;
   offset: number; // 最初のビートまでのオフセット（秒）
+  duration?: number; // 曲の長さ（秒）
   difficulty?: {
     easy?: number;
     normal?: number;
     hard?: number;
   };
-  notes: Note[];
+  notes?: Note[];
+  oilCutChances: OilCutChance[]; // 油切りチャンス
+  cookingStages?: CookingStageConfig[]; // 調理段階
 }
 
 // ゲーム状態

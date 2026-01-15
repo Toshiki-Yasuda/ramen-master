@@ -6,10 +6,16 @@
  */
 
 import { motion, AnimatePresence } from 'framer-motion';
-import type { DetailedJudgmentResult } from '../../hooks/useJudgment';
+import type { Judgment } from '../../types';
+
+interface DetailedJudgmentResult {
+  judgment: Judgment;
+  score: number;
+  delta: number;
+}
 
 interface JudgmentDisplayProps {
-  result: DetailedJudgmentResult | null;
+  result: DetailedJudgmentResult | Judgment | null;
 }
 
 // 判定ごとの色設定
@@ -46,18 +52,23 @@ const TIMING_COLORS = {
 export const JudgmentDisplay = ({ result }: JudgmentDisplayProps) => {
   if (!result) return null;
 
-  const colors = JUDGMENT_COLORS[result.judgment];
-  const timingColor = TIMING_COLORS[result.timing];
+  // 文字列の場合はオブジェクトに変換
+  const normalizedResult = typeof result === 'string'
+    ? { judgment: result, score: 0, delta: 0, timing: 'JUST' as const }
+    : result;
+
+  const colors = JUDGMENT_COLORS[normalizedResult.judgment];
+  const timingColor = 'timing' in normalizedResult ? TIMING_COLORS[normalizedResult.timing] : TIMING_COLORS.JUST;
 
   // PERFECTでJUSTの場合はタイミング表示しない
   const showTiming =
-    result.judgment !== 'MISS' &&
-    !(result.judgment === 'PERFECT' && result.timing === 'JUST');
+    normalizedResult.judgment !== 'MISS' &&
+    !('timing' in normalizedResult && normalizedResult.judgment === 'PERFECT' && normalizedResult.timing === 'JUST');
 
   return (
     <AnimatePresence mode="wait">
       <motion.div
-        key={`${result.judgment}-${result.timeDiff}-${Date.now()}`}
+        key={`${normalizedResult.judgment}-${normalizedResult.delta}-${Date.now()}`}
         className="absolute left-1/4 top-1/2 -translate-y-1/2 flex flex-col items-center justify-center pointer-events-none"
         initial={{ opacity: 0, scale: 0.5, x: -20 }}
         animate={{ opacity: 1, scale: 1, x: 0 }}
@@ -75,7 +86,7 @@ export const JudgmentDisplay = ({ result }: JudgmentDisplayProps) => {
           animate={{ rotateX: 0 }}
           transition={{ duration: 0.2 }}
         >
-          {result.judgment}
+          {normalizedResult.judgment}
         </motion.div>
 
         {/* FAST/SLOW表示 */}
@@ -86,19 +97,19 @@ export const JudgmentDisplay = ({ result }: JudgmentDisplayProps) => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.05 }}
           >
-            {result.timing}
+            {'timing' in normalizedResult ? normalizedResult.timing : 'JUST'}
           </motion.div>
         )}
 
         {/* スコア表示 */}
-        {result.score > 0 && (
+        {normalizedResult.score > 0 && (
           <motion.div
             className="mt-2 text-lg font-heading text-ramen-gold drop-shadow-lg"
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.1 }}
           >
-            +{result.score}
+            +{normalizedResult.score}
           </motion.div>
         )}
       </motion.div>
