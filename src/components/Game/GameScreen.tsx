@@ -16,10 +16,12 @@ import { Home } from 'lucide-react';
 import type { Beatmap, CookingPhase } from '../../types';
 import { useGamePlayState } from '../../hooks/useGamePlayState';
 import { useOilCutJudgment } from '../../hooks/useOilCutJudgment';
+import { useChaosEventTrigger } from '../../hooks/useChaosEventTrigger';
 import { ChefAnimator } from './ChefAnimator';
 import { OilCutChanceDisplay } from './OilCutChanceDisplay';
 import { CookingProgressBar } from './CookingProgressBar';
 import { RamenDisplay } from './RamenDisplay';
+import { ChaosEventDisplay } from './ChaosEventDisplay';
 import { JudgmentDisplay } from './JudgmentDisplay';
 import { SteamEffect } from '../common';
 
@@ -52,6 +54,7 @@ export const GameScreen = ({ beatmap, onBack, onResult }: GameScreenProps) => {
   // ゲーム状態管理
   const gameState = useGamePlayState(beatmap);
   const judgment = useOilCutJudgment();
+  const chaos = useChaosEventTrigger();
 
   // 未判定の油切りチャンスを取得
   const getUnjudgedOilCuts = useCallback(() => {
@@ -134,6 +137,9 @@ export const GameScreen = ({ beatmap, onBack, onResult }: GameScreenProps) => {
         lastProcessedOilCutRef.current.add(id);
         gameState.recordJudgment('MISS');
       });
+
+      // カオスイベント判定
+      chaos.checkAndTriggerEvent(gameState.score);
 
       requestAnimationFrame(updateGame);
     };
@@ -232,6 +238,12 @@ export const GameScreen = ({ beatmap, onBack, onResult }: GameScreenProps) => {
           isActive={nextOilCut !== undefined && nextOilCut.time - displayTimeRef.current <= 0.2}
           timeRemaining={timeToNextOilCut}
           windowSize={200}
+        />
+
+        {/* カオスイベント表示 */}
+        <ChaosEventDisplay
+          eventType={chaos.currentEvent}
+          isActive={chaos.isActive}
         />
       </div>
 

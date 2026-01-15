@@ -7,3 +7,4 @@ export { ChefAnimator } from './ChefAnimator';
 export { OilCutChanceDisplay } from './OilCutChanceDisplay';
 export { CookingProgressBar } from './CookingProgressBar';
 export { RamenDisplay } from './RamenDisplay';
+export { ChaosEventDisplay } from './ChaosEventDisplay';
