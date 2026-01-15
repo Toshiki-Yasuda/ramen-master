@@ -19,6 +19,7 @@ import { useOilCutJudgment } from '../../hooks/useOilCutJudgment';
 import { ChefAnimator } from './ChefAnimator';
 import { OilCutChanceDisplay } from './OilCutChanceDisplay';
 import { CookingProgressBar } from './CookingProgressBar';
+import { RamenDisplay } from './RamenDisplay';
 import { JudgmentDisplay } from './JudgmentDisplay';
 import { SteamEffect } from '../common';
 
@@ -234,8 +235,14 @@ export const GameScreen = ({ beatmap, onBack, onResult }: GameScreenProps) => {
         />
       </div>
 
-      {/* 下部: コントロール */}
-      <div className="flex-0 flex justify-end gap-4 p-4">
+      {/* 下部: ラーメン進化表示 + コントロール */}
+      <div className="flex-0 flex justify-between items-end gap-4 p-4">
+        {/* 左: ラーメン進化表示 */}
+        <div className="w-40">
+          <RamenDisplay level={gameState.ramenLevel} maxCombo={gameState.combo} />
+        </div>
+
+        {/* 右: コントロール */}
         <button
           className="p-2 rounded-full bg-ramen-brown/30 hover:bg-ramen-brown/50 transition-colors"
           onClick={onBack}
