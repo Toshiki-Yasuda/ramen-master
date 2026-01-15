@@ -17,6 +17,7 @@ import type { Beatmap, CookingPhase } from '../../types';
 import { useGamePlayState } from '../../hooks/useGamePlayState';
 import { useOilCutJudgment } from '../../hooks/useOilCutJudgment';
 import { useChaosEventTrigger } from '../../hooks/useChaosEventTrigger';
+import { useAudioManager } from '../../hooks/useAudioManager';
 import { ChefAnimator } from './ChefAnimator';
 import { OilCutChanceDisplay } from './OilCutChanceDisplay';
 import { CookingProgressBar } from './CookingProgressBar';
@@ -33,11 +34,11 @@ interface GameScreenProps {
 
 // 調理段階のタイムテーブル
 const COOKING_STAGES = {
-  soup: { start: 0, end: 2 },
-  oil_cut: { start: 2, end: 6 },
-  noodles: { start: 6, end: 8 },
-  topping: { start: 8, end: 10 },
-  complete: { start: 10, end: 12 },
+  soup: { start: 0, end: 4 },
+  oil_cut: { start: 4, end: 12 },
+  noodles: { start: 12, end: 16 },
+  topping: { start: 16, end: 20 },
+  complete: { start: 20, end: 24 },
 };
 
 export const GameScreen = ({ beatmap, onBack, onResult }: GameScreenProps) => {
@@ -55,6 +56,35 @@ export const GameScreen = ({ beatmap, onBack, onResult }: GameScreenProps) => {
   const gameState = useGamePlayState(beatmap);
   const judgment = useOilCutJudgment();
   const chaos = useChaosEventTrigger();
+  const audio = useAudioManager();
+
+  // BGM・SE読み込み
+  useEffect(() => {
+    const initializeAudio = async () => {
+      try {
+        // BGM読み込み
+        const bgmPath = beatmap.bgm
+          ? `/audio/bgm/${beatmap.bgm}`
+          : '/audio/bgm/bgm_ramen.mp3';
+        await audio.loadBGM(bgmPath);
+
+        // SE読み込み
+        const seFiles = {
+          perfect: '/audio/se/perfect.mp3',
+          great: '/audio/se/great.mp3',
+          good: '/audio/se/good.mp3',
+          miss: '/audio/se/miss.mp3',
+          tap: '/audio/se/tap.mp3',
+          combo: '/audio/se/combo.mp3',
+        };
+        await audio.loadAllSE(seFiles);
+      } catch (error) {
+        console.warn('音声ファイルの読み込みに失敗しました:', error);
+      }
+    };
+
+    initializeAudio();
+  }, [beatmap.bgm, audio.loadBGM, audio.loadAllSE]);
 
   // 未判定の油切りチャンスを取得
   const getUnjudgedOilCuts = useCallback(() => {
@@ -99,10 +129,21 @@ export const GameScreen = ({ beatmap, onBack, onResult }: GameScreenProps) => {
       lastProcessedOilCutRef.current.add(nextOilCut.id);
       gameState.recordJudgment(judgmentResult);
 
-      // 効果音（簡易実装）
+      // SE再生
+      if (judgmentResult !== 'MISS') {
+        const seType = judgmentResult === 'PERFECT'
+          ? 'perfect'
+          : judgmentResult === 'GREAT'
+            ? 'great'
+            : 'good';
+        audio.playSE(seType as any);
+      } else {
+        audio.playSE('miss');
+      }
+
       console.log('判定:', judgmentResult);
     }
-  }, [isPlaying, getNextOilCutChance, judgment, gameState]);
+  }, [isPlaying, getNextOilCutChance, judgment, gameState, audio]);
 
   // ゲームループ
   useEffect(() => {
@@ -124,6 +165,7 @@ export const GameScreen = ({ beatmap, onBack, onResult }: GameScreenProps) => {
       const duration = beatmap.duration || 12; // デフォルト12秒
       if (audioTime >= duration && isPlaying) {
         Tone.Transport.stop();
+        audio.stop();
         setIsPlaying(false);
         onResult(gameState.getScoreData());
       }
@@ -187,8 +229,14 @@ export const GameScreen = ({ beatmap, onBack, onResult }: GameScreenProps) => {
     setCurrentPhase('soup');
     setIsPlaying(true);
     Tone.Transport.bpm.value = beatmap.bpm;
+
+    // BGM再生開始
+    if (audio.isLoaded) {
+      audio.play(0);
+    }
+
     Tone.Transport.start('+0.1');
-  }, [beatmap.bpm, gameState]);
+  }, [beatmap.bpm, gameState, audio]);
 
   // 初期化
   useEffect(() => {
@@ -257,7 +305,11 @@ export const GameScreen = ({ beatmap, onBack, onResult }: GameScreenProps) => {
         {/* 右: コントロール */}
         <button
           className="p-2 rounded-full bg-ramen-brown/30 hover:bg-ramen-brown/50 transition-colors"
-          onClick={onBack}
+          onClick={() => {
+            audio.stop();
+            Tone.Transport.stop();
+            onBack();
+          }}
           aria-label="タイトル画面に戻る"
         >
           <Home className="w-5 h-5 text-ramen-cream" />

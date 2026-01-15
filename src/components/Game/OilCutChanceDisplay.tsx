@@ -130,6 +130,24 @@ export const OilCutChanceDisplay: React.FC<OilCutChanceDisplayProps> = ({
               {timeRemaining.toFixed(2)}s
             </motion.div>
 
+            {/* ビート表示 */}
+            <div className="flex gap-2 justify-center">
+              {[...Array(5)].map((_, i) => (
+                <motion.div
+                  key={i}
+                  className="w-2 h-2 rounded-full bg-ramen-gold"
+                  animate={{
+                    opacity: [0.3, 1, 0.3],
+                  }}
+                  transition={{
+                    duration: 0.5,
+                    repeat: Infinity,
+                    delay: i * 0.1,
+                  }}
+                />
+              ))}
+            </div>
+
             {/* 緊急時の警告（0.1秒以下） */}
             {timeRemaining < 0.1 && (
               <motion.div
