@@ -50,6 +50,7 @@ export interface Beatmap {
   bpm: number;
   offset: number; // 最初のビートまでのオフセット（秒）
   duration?: number; // 曲の長さ（秒）
+  bgm?: string; // BGMファイル名
   difficulty?: {
     easy?: number;
     normal?: number;
