@@ -129,10 +129,15 @@ export class GameEngine {
   private gameContainer: Container | null = null;
   private bgContainer: Container | null = null;
   private laneContainer: Container | null = null;  // レーン（ノーツが流れる道）
+  private chefContainer: Container | null = null;  // 店主キャラクター
   private bowlContainer: Container | null = null;
   private notesContainer: Container | null = null;
   private effectsContainer: Container | null = null;
   private uiContainer: Container | null = null;
+
+  // 店主スプライト
+  private chefSprites: Map<string, Sprite> = new Map();
+  private currentChefState: string = 'taste';
 
   // UI要素
   private chopsticks: Graphics | null = null;
@@ -196,6 +201,7 @@ export class GameEngine {
     this.setupContainers();
     this.setupBackground();
     this.setupLane();
+    this.loadChefSprites(); // 店主画像を非同期で読み込み
     this.setupBowl();
     this.setupUI();
     this.setupAmbientParticles();
@@ -215,6 +221,9 @@ export class GameEngine {
 
     this.laneContainer = new Container();
     this.gameContainer.addChild(this.laneContainer);
+
+    this.chefContainer = new Container();
+    this.gameContainer.addChild(this.chefContainer);
 
     this.bowlContainer = new Container();
     this.gameContainer.addChild(this.bowlContainer);
@@ -297,6 +306,80 @@ export class GameEngine {
       this.bgContainer.addChildAt(bgSprite, 1);
     } catch (e) {
       console.warn('背景画像の読み込みに失敗:', e);
+    }
+  }
+
+  /**
+   * 店主画像を読み込み
+   */
+  private async loadChefSprites(): Promise<void> {
+    if (!this.app || !this.chefContainer) return;
+
+    const chefImages: Record<string, string> = {
+      taste: '/ramen-master/images/chef/taste.png',    // 待機：味見
+      yukiri: '/ramen-master/images/chef/yukiri.png',  // 湯切り中
+      happy: '/ramen-master/images/chef/happy.png',    // GREAT
+      perfect: '/ramen-master/images/chef/perfect.png', // PERFECT
+      serve: '/ramen-master/images/chef/serve.png',    // 完成（リザルト用）
+    };
+
+    const height = this.app.screen.height;
+    const targetHeight = height * 0.7; // 画面の70%
+
+    for (const [key, path] of Object.entries(chefImages)) {
+      try {
+        const texture = await Assets.load(path);
+        const sprite = new Sprite(texture);
+
+        // 高さに合わせてスケール
+        const scale = targetHeight / sprite.height;
+        sprite.scale.set(scale);
+
+        // 右下に配置
+        sprite.anchor.set(1, 1);
+        sprite.x = this.app.screen.width - 20;
+        sprite.y = this.app.screen.height - 10;
+
+        // 最初は非表示
+        sprite.visible = key === 'taste';
+        sprite.alpha = 0.9;
+
+        this.chefSprites.set(key, sprite);
+        this.chefContainer.addChild(sprite);
+      } catch (e) {
+        console.warn(`店主画像の読み込みに失敗: ${key}`, e);
+      }
+    }
+
+    this.currentChefState = 'taste';
+  }
+
+  /**
+   * 店主画像を切り替え
+   */
+  private setChefState(state: string): void {
+    if (this.currentChefState === state) return;
+
+    // 全て非表示
+    this.chefSprites.forEach((sprite) => {
+      sprite.visible = false;
+    });
+
+    // 指定状態を表示
+    const sprite = this.chefSprites.get(state);
+    if (sprite) {
+      sprite.visible = true;
+      sprite.scale.set(sprite.scale.x * 1.05); // ポップ効果
+      this.currentChefState = state;
+
+      // スケールを元に戻す
+      this.safeSetTimeout(() => {
+        if (sprite && this.app) {
+          const targetHeight = this.app.screen.height * 0.7;
+          const originalScale = targetHeight / (sprite.texture.height);
+          sprite.scale.set(originalScale);
+        }
+      }, 100);
     }
   }
 
@@ -1077,6 +1160,18 @@ export class GameEngine {
     this.judgmentSubText.text = judgment;
     this.judgmentSubText.style.fill = color;
     this.judgmentSubText.alpha = 0.9;
+
+    // 店主画像を切り替え
+    const chefState = judgment === 'PERFECT' ? 'perfect'
+                    : judgment === 'GREAT' ? 'happy'
+                    : judgment === 'GOOD' ? 'yukiri'
+                    : 'taste'; // MISS時は味見ポーズ
+    this.setChefState(chefState);
+
+    // 一定時間後に待機状態に戻す
+    this.safeSetTimeout(() => {
+      this.setChefState('taste');
+    }, 500);
 
     const fadeOut = () => {
       if (!this.judgmentText || !this.judgmentSubText) return;
