@@ -1117,9 +1117,79 @@ export class GameEngine {
       this.isRunning = false; // 重複呼び出し防止
       this.safeSetTimeout(() => {
         this.stop();
-        this.onGameEnd?.();
+        this.playEndingAnimation();
       }, ANIMATION_CONFIG.GAME_END_DELAY);
     }
+  }
+
+  /**
+   * 終了アニメーション（店主ズームイン）
+   */
+  private async playEndingAnimation(): Promise<void> {
+    if (!this.app || !this.gameContainer) {
+      this.onGameEnd?.();
+      return;
+    }
+
+    const width = this.app.screen.width;
+    const height = this.app.screen.height;
+
+    // 暗転用オーバーレイ
+    const overlay = new Graphics();
+    overlay.rect(0, 0, width, height).fill({ color: 0x000000, alpha: 0 });
+    this.app.stage.addChild(overlay);
+
+    // 店主画像（serve）を中央に配置
+    const serveSprite = this.chefSprites.get('serve');
+    let endingSprite: Sprite | null = null;
+
+    if (serveSprite) {
+      // 新しいスプライトを作成（元のは非表示に）
+      endingSprite = new Sprite(serveSprite.texture);
+      endingSprite.anchor.set(0.5);
+      endingSprite.x = width / 2;
+      endingSprite.y = height / 2;
+      endingSprite.scale.set(0.3);
+      endingSprite.alpha = 0;
+      this.app.stage.addChild(endingSprite);
+    }
+
+    // アニメーション
+    let frame = 0;
+    const totalFrames = 60; // 約1秒
+
+    const animate = () => {
+      frame++;
+      const progress = frame / totalFrames;
+      const easeOut = 1 - Math.pow(1 - progress, 3); // easeOutCubic
+
+      // オーバーレイをフェードイン
+      overlay.clear();
+      overlay.rect(0, 0, width, height).fill({ color: 0x1a0f0a, alpha: easeOut * 0.85 });
+
+      // 店主画像をズームイン＆フェードイン
+      if (endingSprite) {
+        endingSprite.alpha = easeOut;
+        const targetScale = Math.min(height * 0.9 / endingSprite.texture.height, 1.2);
+        endingSprite.scale.set(0.3 + (targetScale - 0.3) * easeOut);
+        // 少し上下に揺れる
+        endingSprite.y = height / 2 + Math.sin(frame * 0.1) * 5;
+      }
+
+      if (frame < totalFrames) {
+        this.safeRequestAnimationFrame(animate);
+      } else {
+        // アニメーション完了後、少し待ってからリザルトへ
+        this.safeSetTimeout(() => {
+          // クリーンアップ
+          overlay.destroy();
+          if (endingSprite) endingSprite.destroy();
+          this.onGameEnd?.();
+        }, 800);
+      }
+    };
+
+    animate();
   }
 
   /**
