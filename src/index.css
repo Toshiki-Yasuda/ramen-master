@@ -1,440 +1,76 @@
 @import "tailwindcss";
 
-/* ===========================
-   Tailwind テーマ拡張
-   =========================== */
-@theme {
-  /* ラーメン屋テーマカラー */
-  --color-ramen-red: #D32F2F;
-  --color-ramen-red-light: #EF5350;
-  --color-ramen-red-dark: #B71C1C;
-  --color-ramen-orange: #F57C00;
-  --color-ramen-orange-light: #FF9800;
-  --color-ramen-gold: #FFD54F;
-  --color-ramen-gold-light: #FFECB3;
-  --color-ramen-dark: #1A1A1A;
-  --color-ramen-dark-light: #2D2D2D;
-  --color-ramen-wood: #3E2723;
-  --color-ramen-wood-light: #5D4037;
-  --color-ramen-cream: #FFF8E1;
-  --color-ramen-cream-dark: #FFE0B2;
-}
-
-/* ===========================
-   カラーパレット（CSS変数）
-   =========================== */
-:root {
-  /* メインカラー */
-  --color-primary: #D32F2F;
-  --color-secondary: #F57C00;
-  --color-accent: #FFD54F;
-
-  /* 背景カラー */
-  --color-bg-dark: #1A1A1A;
-  --color-bg-light: #2D2D2D;
-  --color-wood: #3E2723;
-  --color-wood-light: #5D4037;
-
-  /* テキストカラー */
-  --color-text: #FFFFFF;
-  --color-text-cream: #FFF8E1;
-  --color-text-muted: rgba(255, 248, 225, 0.7);
-
-  /* フォント */
-  --font-heading: 'Zen Maru Gothic', 'Noto Sans JP', sans-serif;
-  --font-body: 'Noto Sans JP', system-ui, -apple-system, sans-serif;
-  --font-accent: 'Shippori Mincho', serif;
-
-  font-family: var(--font-body);
-  line-height: 1.5;
-  font-weight: 400;
-}
-
-/* フォントユーティリティ */
-.font-heading {
-  font-family: var(--font-heading);
-}
-
-.font-accent {
-  font-family: var(--font-accent);
-}
-
-/* ===========================
-   ベーススタイル
-   =========================== */
-body {
+/* ベースリセット */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
   margin: 0;
-  min-width: 320px;
-  min-height: 100vh;
-  background: var(--color-bg-dark);
-  color: var(--color-text-cream);
-  overflow-x: hidden;
+  padding: 0;
 }
 
+html,
+body,
 #root {
   width: 100%;
-  height: 100vh;
-  position: relative;
-}
-
-/* ===========================
-   湯気エフェクト
-   =========================== */
-@keyframes steam-rise {
-  0% {
-    transform: translateY(0) scaleX(1);
-    opacity: 0;
-  }
-  15% {
-    opacity: 0.5;
-  }
-  50% {
-    transform: translateY(-80px) scaleX(1.3);
-    opacity: 0.3;
-  }
-  100% {
-    transform: translateY(-150px) scaleX(1.6);
-    opacity: 0;
-  }
-}
-
-@keyframes steam-drift {
-  0%, 100% {
-    transform: translateX(0);
-  }
-  50% {
-    transform: translateX(15px);
-  }
-}
-
-.steam-container {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 250px;
-  pointer-events: none;
-  z-index: 10;
+  height: 100%;
   overflow: hidden;
 }
 
-.steam {
+body {
+  font-family: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #1a0a00;
+  color: #fef3c7;
+}
+
+/* 湯気エフェクト */
+.steam-effect {
   position: absolute;
   bottom: 0;
-  width: 80px;
-  height: 80px;
-  background: radial-gradient(
-    ellipse at center,
-    rgba(255, 255, 255, 0.7) 0%,
-    rgba(255, 255, 255, 0.25) 40%,
-    transparent 70%
-  );
-  border-radius: 50%;
-  animation:
-    steam-rise 5s ease-out infinite,
-    steam-drift 4s ease-in-out infinite;
+  left: 50%;
+  width: 200px;
+  height: 100px;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse at center bottom, rgba(255,255,255,0.1) 0%, transparent 70%);
+  animation: steam-rise 3s ease-in-out infinite;
 }
 
-.steam:nth-child(1) { left: 5%; animation-delay: 0s; width: 60px; height: 60px; }
-.steam:nth-child(2) { left: 20%; animation-delay: 1.2s; width: 50px; height: 50px; }
-.steam:nth-child(3) { left: 40%; animation-delay: 0.5s; width: 100px; height: 100px; }
-.steam:nth-child(4) { left: 60%; animation-delay: 2s; width: 70px; height: 70px; }
-.steam:nth-child(5) { left: 80%; animation-delay: 1.5s; width: 55px; height: 55px; }
-.steam:nth-child(6) { left: 95%; animation-delay: 0.8s; width: 65px; height: 65px; }
-
-/* ===========================
-   グローエフェクト
-   =========================== */
-@keyframes glow-pulse {
+@keyframes steam-rise {
   0%, 100% {
-    box-shadow: 0 0 10px rgba(255, 213, 79, 0.3),
-                0 0 20px rgba(255, 213, 79, 0.2);
+    opacity: 0.3;
+    transform: translateX(-50%) translateY(0) scale(1);
   }
   50% {
-    box-shadow: 0 0 20px rgba(255, 213, 79, 0.5),
-                0 0 40px rgba(255, 213, 79, 0.3);
+    opacity: 0.5;
+    transform: translateX(-50%) translateY(-20px) scale(1.1);
   }
 }
 
-@keyframes border-glow {
-  0%, 100% {
-    border-color: rgba(255, 213, 79, 0.3);
-  }
-  50% {
-    border-color: rgba(255, 213, 79, 0.6);
-  }
-}
-
-.glow-effect {
-  animation: glow-pulse 2s ease-in-out infinite;
-}
-
-.border-glow {
-  animation: border-glow 2s ease-in-out infinite;
-}
-
-/* ===========================
-   食券ボタンスタイル
-   =========================== */
-.ticket-button {
-  position: relative;
-  padding: 16px 48px;
-  background: linear-gradient(
-    180deg,
-    #FFE082 0%,
-    #FFD54F 50%,
-    #FFC107 100%
-  );
-  border: 4px solid #5D4037;
-  border-radius: 4px;
-  color: #3E2723;
-  font-weight: 900;
-  font-size: 1.25rem;
-  text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.5);
-  box-shadow:
-    inset 0 2px 4px rgba(255, 255, 255, 0.5),
-    inset 0 -2px 4px rgba(0, 0, 0, 0.2),
-    0 4px 8px rgba(0, 0, 0, 0.4),
-    0 0 20px rgba(255, 193, 7, 0.3);
-  cursor: pointer;
-  transition: all 0.15s ease;
-  transform-origin: center;
-}
-
-.ticket-button::before {
-  content: '';
-  position: absolute;
-  top: 4px;
-  left: 4px;
-  right: 4px;
-  height: 30%;
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.4) 0%,
-    transparent 100%
-  );
-  border-radius: 2px;
-}
-
-.ticket-button:hover {
-  background: linear-gradient(
-    180deg,
-    #FFF59D 0%,
-    #FFE082 50%,
-    #FFD54F 100%
-  );
-  box-shadow:
-    inset 0 2px 4px rgba(255, 255, 255, 0.5),
-    inset 0 -2px 4px rgba(0, 0, 0, 0.2),
-    0 6px 12px rgba(0, 0, 0, 0.5),
-    0 0 30px rgba(255, 193, 7, 0.5);
-  transform: translateY(-2px);
-}
-
-.ticket-button:active {
-  transform: translateY(2px);
-  box-shadow:
-    inset 0 2px 4px rgba(0, 0, 0, 0.2),
-    inset 0 -2px 4px rgba(255, 255, 255, 0.3),
-    0 2px 4px rgba(0, 0, 0, 0.4);
-}
-
-/* 赤い食券ボタン */
-.ticket-button-red {
-  background: linear-gradient(
-    180deg,
-    #EF5350 0%,
-    #D32F2F 50%,
-    #B71C1C 100%
-  );
-  color: #FFFFFF;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
-  box-shadow:
-    inset 0 2px 4px rgba(255, 255, 255, 0.3),
-    inset 0 -2px 4px rgba(0, 0, 0, 0.3),
-    0 4px 8px rgba(0, 0, 0, 0.4),
-    0 0 20px rgba(211, 47, 47, 0.4);
-}
-
-.ticket-button-red:hover {
-  background: linear-gradient(
-    180deg,
-    #FF5252 0%,
-    #EF5350 50%,
-    #D32F2F 100%
-  );
-  box-shadow:
-    inset 0 2px 4px rgba(255, 255, 255, 0.3),
-    inset 0 -2px 4px rgba(0, 0, 0, 0.3),
-    0 6px 12px rgba(0, 0, 0, 0.5),
-    0 0 30px rgba(211, 47, 47, 0.6);
-}
-
-/* ===========================
-   ガラスモーフィズムパネル
-   TODO: モーダルやオーバーレイで使用予定
-   =========================== */
-.glass-panel {
-  background: rgba(26, 26, 26, 0.6);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 213, 79, 0.2);
-  border-radius: 12px;
-}
-
-.glass-panel-dark {
-  background: rgba(26, 26, 26, 0.8);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 213, 79, 0.15);
-}
-
-/* ===========================
-   タイトルテキストスタイル
-   =========================== */
-.title-text {
-  font-weight: 900;
-  color: var(--color-accent);
-  text-shadow:
-    3px 3px 0 var(--color-primary),
-    6px 6px 0 rgba(0, 0, 0, 0.3),
-    0 0 30px rgba(255, 213, 79, 0.5);
-  letter-spacing: 0.1em;
-}
-
-.subtitle-text {
-  color: var(--color-text-cream);
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-}
-
-/* ===========================
-   カスタムユーティリティ
-   =========================== */
-@utility text-shadow-glow {
-  text-shadow:
-    0 0 10px currentColor,
-    0 0 20px currentColor,
-    0 0 40px currentColor;
-}
-
-@utility bg-steam {
-  background: radial-gradient(
-    ellipse at center,
-    rgba(255, 255, 255, 0.3) 0%,
-    transparent 70%
-  );
-}
-
-/* ===========================
-   追加アニメーション
-   =========================== */
-@keyframes float {
+/* ランクのゆっくりバウンス */
+@keyframes bounce-slow {
   0%, 100% {
     transform: translateY(0);
   }
   50% {
-    transform: translateY(-8px);
+    transform: translateY(-10px);
   }
 }
 
-@keyframes shimmer {
-  0% {
-    background-position: -200% center;
-  }
-  100% {
-    background-position: 200% center;
-  }
+.animate-bounce-slow {
+  animation: bounce-slow 2s ease-in-out infinite;
 }
 
-@keyframes pulse-glow {
-  0%, 100% {
-    box-shadow: 0 0 5px rgba(255, 213, 79, 0.3),
-                0 0 10px rgba(255, 213, 79, 0.2);
-  }
-  50% {
-    box-shadow: 0 0 15px rgba(255, 213, 79, 0.5),
-                0 0 30px rgba(255, 213, 79, 0.3);
-  }
+/* タッチデバイスでの選択ハイライト無効化 */
+canvas {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+  user-select: none;
 }
 
-@keyframes spin-slow {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* 横スクロールエフェクト */
-@keyframes horizontal-flow {
-  0% {
-    opacity: 0.6;
-  }
-  50% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0.6;
-  }
-}
-
-/* 判定ライン強調エフェクト */
-@keyframes judgment-pulse {
-  0%, 100% {
-    box-shadow: 0 0 10px rgba(255, 213, 79, 0.3);
-  }
-  50% {
-    box-shadow: 0 0 20px rgba(255, 213, 79, 0.6);
-  }
-}
-
-.animate-float {
-  animation: float 3s ease-in-out infinite;
-}
-
-.animate-horizontal-flow {
-  animation: horizontal-flow 2s ease-in-out infinite;
-}
-
-.animate-judgment-pulse {
-  animation: judgment-pulse 1.5s ease-in-out infinite;
-}
-
-.animate-shimmer {
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(255, 213, 79, 0.3) 50%,
-    transparent 100%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 2s linear infinite;
-}
-
-.animate-pulse-glow {
-  animation: pulse-glow 2s ease-in-out infinite;
-}
-
-.animate-spin-slow {
-  animation: spin-slow 10s linear infinite;
-}
-
-/* ホバー時のエフェクト */
-.hover-lift {
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.hover-lift:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
-}
-
-/* グラデーションボーダー */
-.gradient-border {
-  position: relative;
-  background: linear-gradient(var(--color-bg-dark), var(--color-bg-dark)) padding-box,
-              linear-gradient(135deg, var(--color-accent), var(--color-secondary)) border-box;
-  border: 2px solid transparent;
-  border-radius: 12px;
+/* ボタンのフォーカス時のアウトライン */
+button:focus-visible {
+  outline: 2px solid #fbbf24;
+  outline-offset: 2px;
 }

@@ -1,130 +1,77 @@
-// ゲームの判定種類
-export type Judgment = 'PERFECT' | 'GREAT' | 'GOOD' | 'MISS';
+// ゲーム状態
+export type GameState = 'title' | 'loading' | 'playing' | 'paused' | 'result';
 
 // 判定結果
-export interface JudgmentResult {
-  judgment: Judgment;
-  score: number;
-  delta: number; // タイミングのずれ（ms）
-}
+export type JudgmentType = 'PERFECT' | 'GREAT' | 'GOOD' | 'MISS';
 
-// 油切りチャンスデータ
-export interface OilCutChance {
-  id: string;
-  time: number; // 秒
-  isHit?: boolean;
-  judgment?: Judgment;
-}
+// 判定ウィンドウ（ms）
+export const JUDGMENT_WINDOWS = {
+  PERFECT: 30,
+  GREAT: 60,
+  GOOD: 100,
+} as const;
 
-// 調理段階
-export type CookingPhase = 'soup' | 'oil_cut' | 'noodles' | 'topping' | 'complete';
+// スコア設定
+export const SCORE_VALUES: Record<JudgmentType, number> = {
+  PERFECT: 1000,
+  GREAT: 800,
+  GOOD: 500,
+  MISS: 0,
+};
 
-// 調理段階設定
-export interface CookingStageConfig {
-  phase: CookingPhase;
-  startTime: number;
-  endTime: number;
-  description: string;
-}
-
-// ノーツの種類
-export type NoteType = 'tap' | 'hold' | 'yukigiri_combo';
-
-// ノーツデータ（旧システム用、互換性のため保持）
+// ノート（譜面上の1打）
 export interface Note {
-  id: string;
-  time: number; // 秒
-  type: NoteType;
-  lane?: number;
-  duration?: number;
-  pattern?: number[];
-  isHit?: boolean;
-  judgment?: Judgment;
+  t: number; // 出現時刻（秒）
+  hit?: boolean; // 判定済みフラグ
+  judgment?: JudgmentType; // 判定結果
+}
+
+// 譜面メタ情報
+export interface BeatmapMeta {
+  title: string;
+  bpm: number;
+  offset: number; // 開始オフセット（秒）
+}
+
+// 譜面オーディオ設定
+export interface BeatmapAudio {
+  bgm: string; // BGMファイルパス
 }
 
 // 譜面データ
 export interface Beatmap {
-  songId: string;
-  title: string;
-  artist?: string;
-  bpm: number;
-  offset: number; // 最初のビートまでのオフセット（秒）
-  duration?: number; // 曲の長さ（秒）
-  bgm?: string; // BGMファイル名
-  difficulty?: {
-    easy?: number;
-    normal?: number;
-    hard?: number;
-  };
-  notes?: Note[];
-  oilCutChances: OilCutChance[]; // 油切りチャンス
-  cookingStages?: CookingStageConfig[]; // 調理段階
+  meta: BeatmapMeta;
+  audio: BeatmapAudio;
+  notes: Note[];
 }
 
-// ゲーム状態
-export type GameState = 'title' | 'loading' | 'playing' | 'paused' | 'result';
+// 判定カウント
+export interface JudgmentCounts {
+  perfect: number;
+  great: number;
+  good: number;
+  miss: number;
+}
 
-// スコア情報
+// スコアデータ
 export interface ScoreData {
+  score: number;
+  maxCombo: number;
+  judgments: JudgmentCounts;
+}
+
+// ゲームストア状態
+export interface GameStoreState {
+  gameState: GameState;
   score: number;
   combo: number;
   maxCombo: number;
-  judgments: {
-    perfect: number;
-    great: number;
-    good: number;
-    miss: number;
-  };
-}
+  judgments: JudgmentCounts;
+  lastJudgment: JudgmentType | null;
 
-// カオスイベント
-export interface ChaosEvent {
-  id: string;
-  minScore: number;
-  image: string;
-  duration: number; // ms
-  animation?: string;
-}
-
-// ラーメンレベル
-export interface RamenLevel {
-  level: number;
-  combo: number;
-  name: string;
-  description: string;
-  image?: string;
-}
-
-// 店主の表情
-export type ChefExpression =
-  | 'idle'
-  | 'yukigiri'
-  | 'perfect'
-  | 'great'
-  | 'miss'
-  | 'wink'
-  | 'muscle';
-
-// 店主のアニメーション状態
-export interface ChefState {
-  expression: ChefExpression;
-  isAnimating: boolean;
-}
-
-// オーディオ設定
-export interface AudioConfig {
-  bpm: number;
-  audioOffset: number; // キャリブレーションで設定
-  videoOffset: number;
-}
-
-// ゲームコンフィグ
-export interface GameConfig {
-  audio: AudioConfig;
-  noteSpeed: number; // ノーツの移動速度
-  judgmentWindows: {
-    perfect: number;
-    great: number;
-    good: number;
-  };
+  // アクション
+  setGameState: (state: GameState) => void;
+  addScore: (judgment: JudgmentType) => void;
+  resetGame: () => void;
+  getScoreData: () => ScoreData;
 }
