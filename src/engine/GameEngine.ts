@@ -46,7 +46,8 @@ const GAME_CONFIG = {
   NOTE_HEIGHT: 50,            // ノーツ高さ（正方形に近く）
   CHOPSTICK_WIDTH: 10,        // 箸の幅
   CHOPSTICK_GAP: 60,          // 箸の間隔（ノーツに合わせて）
-  LANE_HEIGHT: 70,            // レーンの高さ
+  LANE_HEIGHT: 80,            // レーンの高さ
+  LANE_BOTTOM_MARGIN: 80,     // レーンの下端からの余白
   GLOW_UPDATE_INTERVAL: 3,    // フレーム間隔（パフォーマンス最適化）
 } as const;
 
@@ -391,8 +392,9 @@ export class GameEngine {
 
     const width = this.app.screen.width;
     const height = this.app.screen.height;
-    const laneY = height / 2;
     const laneHeight = GAME_CONFIG.LANE_HEIGHT;
+    // レーンを画面下部に配置
+    const laneY = height - GAME_CONFIG.LANE_BOTTOM_MARGIN - laneHeight / 2;
 
     // レーン背景（暗いストライプ）
     const laneBg = new Graphics();
@@ -517,10 +519,13 @@ export class GameEngine {
         alpha: 0.8,
       },
     });
+    // レーンのY座標（判定テキスト配置用）
+    const laneY = height - GAME_CONFIG.LANE_BOTTOM_MARGIN - GAME_CONFIG.LANE_HEIGHT / 2;
+
     this.judgmentText = new Text({ text: '', style: judgmentStyle });
     this.judgmentText.anchor.set(0.5);
-    this.judgmentText.x = width / 2;
-    this.judgmentText.y = height / 2 - 30;
+    this.judgmentText.x = width / 3;  // 左寄り（店主と被らない）
+    this.judgmentText.y = laneY - 100;  // レーンの上
     this.judgmentText.alpha = 0;
     this.effectsContainer.addChild(this.judgmentText);
 
@@ -534,8 +539,8 @@ export class GameEngine {
     });
     this.judgmentSubText = new Text({ text: '', style: subStyle });
     this.judgmentSubText.anchor.set(0.5);
-    this.judgmentSubText.x = width / 2;
-    this.judgmentSubText.y = height / 2 + 35;
+    this.judgmentSubText.x = width / 3;
+    this.judgmentSubText.y = laneY - 40;  // 判定テキストの下
     this.judgmentSubText.alpha = 0;
     this.effectsContainer.addChild(this.judgmentSubText);
 
@@ -637,37 +642,42 @@ export class GameEngine {
   private drawChopsticks(): void {
     if (!this.chopsticks || !this.chopsticksGlow || !this.app) return;
 
-    const height = this.app.screen.height;
+    const screenHeight = this.app.screen.height;
     const x = GAME_CONFIG.JUDGE_LINE_X;
     const gap = GAME_CONFIG.CHOPSTICK_GAP;
     const w = GAME_CONFIG.CHOPSTICK_WIDTH;
+
+    // レーンの位置に合わせた箸の高さ
+    const laneY = screenHeight - GAME_CONFIG.LANE_BOTTOM_MARGIN - GAME_CONFIG.LANE_HEIGHT / 2;
+    const chopstickTop = laneY - GAME_CONFIG.LANE_HEIGHT / 2 - 20;
+    const chopstickHeight = GAME_CONFIG.LANE_HEIGHT + 40;
 
     this.chopsticks.clear();
     this.chopsticksGlow.clear();
 
     // グロー効果
     const glowAlpha = 0.1 + Math.sin(this.glowPhase) * 0.05;
-    this.chopsticksGlow.roundRect(x - gap / 2 - w - 10, 0, w + 20, height, w)
+    this.chopsticksGlow.roundRect(x - gap / 2 - w - 10, chopstickTop, w + 20, chopstickHeight, w)
       .fill({ color: COLORS.CHOPSTICK_GLOW, alpha: glowAlpha });
-    this.chopsticksGlow.roundRect(x + gap / 2 - 10, 0, w + 20, height, w)
+    this.chopsticksGlow.roundRect(x + gap / 2 - 10, chopstickTop, w + 20, chopstickHeight, w)
       .fill({ color: COLORS.CHOPSTICK_GLOW, alpha: glowAlpha });
 
     // 左の箸
-    this.chopsticks.roundRect(x - gap / 2 - w, 0, w, height, w / 2).fill(COLORS.CHOPSTICK);
+    this.chopsticks.roundRect(x - gap / 2 - w, chopstickTop, w, chopstickHeight, w / 2).fill(COLORS.CHOPSTICK);
     // ハイライト
-    this.chopsticks.roundRect(x - gap / 2 - w + 1, 0, 3, height, 1)
+    this.chopsticks.roundRect(x - gap / 2 - w + 1, chopstickTop, 3, chopstickHeight, 1)
       .fill({ color: COLORS.CHOPSTICK_HIGHLIGHT, alpha: 0.7 });
 
     // 右の箸
-    this.chopsticks.roundRect(x + gap / 2, 0, w, height, w / 2).fill(COLORS.CHOPSTICK);
+    this.chopsticks.roundRect(x + gap / 2, chopstickTop, w, chopstickHeight, w / 2).fill(COLORS.CHOPSTICK);
     // ハイライト
-    this.chopsticks.roundRect(x + gap / 2 + 1, 0, 3, height, 1)
+    this.chopsticks.roundRect(x + gap / 2 + 1, chopstickTop, 3, chopstickHeight, 1)
       .fill({ color: COLORS.CHOPSTICK_HIGHLIGHT, alpha: 0.7 });
 
     // 装飾（箸の上部に金のライン）
-    this.chopsticks.roundRect(x - gap / 2 - w, 50, w, 30, 2)
+    this.chopsticks.roundRect(x - gap / 2 - w, chopstickTop + 10, w, 20, 2)
       .fill({ color: COLORS.GOLD, alpha: 0.4 });
-    this.chopsticks.roundRect(x + gap / 2, 50, w, 30, 2)
+    this.chopsticks.roundRect(x + gap / 2, chopstickTop + 10, w, 20, 2)
       .fill({ color: COLORS.GOLD, alpha: 0.4 });
   }
 
@@ -834,7 +844,9 @@ export class GameEngine {
 
     const screenWidth = this.app.screen.width;
     const screenHeight = this.app.screen.height;
-    const noteY = screenHeight / 2 - GAME_CONFIG.NOTE_HEIGHT / 2;
+    // レーンと同じ位置（画面下部）
+    const laneY = screenHeight - GAME_CONFIG.LANE_BOTTOM_MARGIN - GAME_CONFIG.LANE_HEIGHT / 2;
+    const noteY = laneY - GAME_CONFIG.NOTE_HEIGHT / 2;
 
     this.noteManager.getNotes().forEach((note, index) => {
       if (note.hit) {
@@ -1124,9 +1136,10 @@ export class GameEngine {
       this.onScoreUpdate?.(judgment);
 
       if (judgment !== 'MISS') {
-        const y = this.app.screen.height / 2;
+        // レーンのY座標でパーティクル発生
+        const laneY = this.app.screen.height - GAME_CONFIG.LANE_BOTTOM_MARGIN - GAME_CONFIG.LANE_HEIGHT / 2;
         const particleCount = judgment === 'PERFECT' ? 24 : judgment === 'GREAT' ? 16 : 12;
-        this.spawnHitParticles(GAME_CONFIG.JUDGE_LINE_X, y, JUDGMENT_COLORS[judgment], particleCount);
+        this.spawnHitParticles(GAME_CONFIG.JUDGE_LINE_X, laneY, JUDGMENT_COLORS[judgment], particleCount);
 
         // PERFECTでフラッシュ
         if (judgment === 'PERFECT') {
