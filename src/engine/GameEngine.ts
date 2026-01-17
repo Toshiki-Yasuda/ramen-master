@@ -41,12 +41,12 @@ const COLORS = {
 // ゲーム設定（横幅フル活用版）
 const GAME_CONFIG = {
   JUDGE_LINE_X: 150,          // 判定ライン位置（左端寄り）
-  NOTE_SPEED: 280,            // ノーツ速度（遅くして滞在時間延長）
-  NOTE_WIDTH: 140,            // ノーツ幅（大きく）
-  NOTE_HEIGHT: 32,            // ノーツ高さ（大きく）
+  NOTE_SPEED: 350,            // ノーツ速度（速くしてリズム感向上）
+  NOTE_WIDTH: 50,             // ノーツ幅（コンパクトに）
+  NOTE_HEIGHT: 50,            // ノーツ高さ（正方形に近く）
   CHOPSTICK_WIDTH: 10,        // 箸の幅
-  CHOPSTICK_GAP: 70,          // 箸の間隔（ノーツに合わせて）
-  LANE_HEIGHT: 80,            // レーンの高さ
+  CHOPSTICK_GAP: 60,          // 箸の間隔（ノーツに合わせて）
+  LANE_HEIGHT: 70,            // レーンの高さ
   GLOW_UPDATE_INTERVAL: 3,    // フレーム間隔（パフォーマンス最適化）
 } as const;
 
@@ -879,38 +879,35 @@ export class GameEngine {
   }
 
   /**
-   * リッチなノーツ作成
+   * リッチなノーツ作成（円形）
    */
   private createNoteGraphic(): Container {
     const container = new Container();
-    const w = GAME_CONFIG.NOTE_WIDTH;
-    const h = GAME_CONFIG.NOTE_HEIGHT;
+    const size = GAME_CONFIG.NOTE_WIDTH;
+    const radius = size / 2;
 
-    // グロー（背景）- より大きく
+    // グロー（背景）
     const glow = new Graphics();
-    glow.roundRect(-8, -8, w + 16, h + 16, h).fill({ color: COLORS.NOODLE_GLOW, alpha: 0 });
+    glow.circle(radius, radius, radius + 10).fill({ color: COLORS.NOODLE_GLOW, alpha: 0 });
     container.addChild(glow);
 
     // 影
     const shadow = new Graphics();
-    shadow.roundRect(3, 4, w, h, h / 2).fill({ color: 0x000000, alpha: 0.3 });
+    shadow.circle(radius + 3, radius + 4, radius).fill({ color: 0x000000, alpha: 0.3 });
     container.addChild(shadow);
 
-    // メインノーツ（麺）- より立体的に
+    // メインノーツ（円形・丼のイメージ）
     const note = new Graphics();
-    // ベース色
-    note.roundRect(0, 0, w, h, h / 2).fill(COLORS.NOODLE);
+    // ベース色（温かみのある色）
+    note.circle(radius, radius, radius).fill(COLORS.NOODLE);
+    // 外枠（金色）
+    note.circle(radius, radius, radius).stroke({ color: COLORS.GOLD, width: 3 });
+    // 内側の円（丼の縁をイメージ）
+    note.circle(radius, radius, radius * 0.7).stroke({ color: COLORS.GOLD, width: 1.5, alpha: 0.5 });
     // 上部ハイライト（立体感）
-    note.roundRect(0, 0, w, h * 0.4, h / 3).fill({ color: 0xffffff, alpha: 0.4 });
-    // 境界線
-    note.roundRect(0, 0, w, h, h / 2).stroke({ color: COLORS.GOLD, width: 2 });
-    // 中央の光沢ライン
-    note.roundRect(10, h * 0.3, w - 20, h * 0.15, h / 8).fill({ color: 0xffffff, alpha: 0.6 });
-    // 麺の模様（3本のライン）
-    for (let i = 0; i < 3; i++) {
-      const lineX = w * 0.25 + (w * 0.25) * i;
-      note.rect(lineX, h * 0.2, 2, h * 0.6).fill({ color: COLORS.NOODLE_STROKE, alpha: 0.3 });
-    }
+    note.ellipse(radius, radius * 0.6, radius * 0.6, radius * 0.3).fill({ color: 0xffffff, alpha: 0.4 });
+    // 中央の光点
+    note.circle(radius * 0.7, radius * 0.5, radius * 0.15).fill({ color: 0xffffff, alpha: 0.7 });
     container.addChild(note);
 
     return container;
