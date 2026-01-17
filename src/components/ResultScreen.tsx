@@ -1,4 +1,3 @@
-import { Trophy, Target, RotateCcw, Home } from 'lucide-react';
 import type { ScoreData } from '../types';
 
 interface ResultScreenProps {
@@ -8,108 +7,114 @@ interface ResultScreenProps {
 }
 
 // ランクを計算
-function getRank(scoreData: ScoreData): string {
+function getRank(scoreData: ScoreData): { rank: string; label: string } {
   const total =
     scoreData.judgments.perfect +
     scoreData.judgments.great +
     scoreData.judgments.good +
     scoreData.judgments.miss;
 
-  if (total === 0) return 'C';
+  if (total === 0) return { rank: 'C', label: '修行中' };
 
   const perfectRate = scoreData.judgments.perfect / total;
-  if (perfectRate >= 0.95) return 'S';
-  if (perfectRate >= 0.85) return 'A';
-  if (perfectRate >= 0.7) return 'B';
-  return 'C';
+  if (perfectRate >= 0.95) return { rank: '極', label: 'MASTER' };
+  if (perfectRate >= 0.85) return { rank: '匠', label: 'EXPERT' };
+  if (perfectRate >= 0.7) return { rank: '職', label: 'SKILLED' };
+  return { rank: '習', label: 'TRAINING' };
 }
 
 const rankColors: Record<string, string> = {
-  S: 'text-yellow-400',
-  A: 'text-green-400',
-  B: 'text-blue-400',
-  C: 'text-gray-400',
+  '極': 'from-yellow-400 to-amber-500',
+  '匠': 'from-green-400 to-emerald-500',
+  '職': 'from-blue-400 to-cyan-500',
+  '習': 'from-gray-400 to-gray-500',
 };
 
 export function ResultScreen({ scoreData, onRetry, onBack }: ResultScreenProps) {
-  const rank = getRank(scoreData);
+  const { rank, label } = getRank(scoreData);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-amber-900 to-amber-950">
-      {/* リザルトカード */}
-      <div className="bg-amber-800/50 backdrop-blur-sm rounded-2xl p-8 shadow-2xl border border-amber-600/30 max-w-md w-full mx-4">
-        <h2 className="text-3xl font-bold text-amber-200 text-center mb-6 font-serif">
-          リザルト
+    <div className="relative flex flex-col items-center justify-center min-h-screen bg-[#1a0f0a] overflow-hidden">
+      {/* 背景 */}
+      <div className="absolute inset-0 bg-gradient-to-b from-[#2d1f15] to-[#1a0f0a]" />
+      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-[#c94a4a]/10 rounded-full blur-3xl" />
+
+      {/* コンテンツ */}
+      <div className="relative z-10 flex flex-col items-center w-full max-w-md px-6">
+        {/* タイトル */}
+        <h2 className="text-sm tracking-[0.4em] text-[#d4af37] mb-12 uppercase">
+          Result
         </h2>
 
         {/* ランク */}
-        <div
-          className={`text-8xl font-bold text-center mb-4 ${rankColors[rank]} animate-bounce-slow`}
-        >
-          {rank}
+        <div className="relative mb-8">
+          <div className={`text-9xl font-bold bg-gradient-to-b ${rankColors[rank]} bg-clip-text text-transparent`}
+               style={{ fontFamily: '"Hiragino Mincho ProN", "Yu Mincho", serif' }}>
+            {rank}
+          </div>
+          <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 text-xs tracking-[0.3em] text-[#fff8e7]/60">
+            {label}
+          </div>
         </div>
 
         {/* スコア */}
-        <div className="text-4xl font-bold text-amber-200 text-center mb-8">
+        <div className="text-5xl font-extralight text-[#fff8e7] mb-12 tracking-wider">
           {scoreData.score.toLocaleString()}
         </div>
 
-        {/* 統計 */}
-        <div className="grid grid-cols-2 gap-4 mb-8">
-          <div className="flex items-center gap-2">
-            <Trophy className="w-5 h-5 text-amber-400" />
-            <span className="text-amber-300/80">最大コンボ:</span>
-            <span className="text-amber-100 font-bold">{scoreData.maxCombo}</span>
+        {/* 統計グリッド */}
+        <div className="w-full grid grid-cols-2 gap-6 mb-12">
+          {/* 最大コンボ */}
+          <div className="col-span-2 flex items-center justify-center gap-4 py-3 border-y border-[#d4af37]/20">
+            <span className="text-xs tracking-[0.2em] text-[#d4af37]">MAX COMBO</span>
+            <span className="text-2xl font-light text-[#fff8e7]">{scoreData.maxCombo}</span>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Target className="w-5 h-5 text-yellow-400" />
-            <span className="text-amber-300/80">PERFECT:</span>
-            <span className="text-amber-100 font-bold">{scoreData.judgments.perfect}</span>
-          </div>
+          {/* 判定内訳 */}
+          <JudgmentStat label="極" value={scoreData.judgments.perfect} color="text-yellow-400" />
+          <JudgmentStat label="良" value={scoreData.judgments.great} color="text-green-400" />
+          <JudgmentStat label="可" value={scoreData.judgments.good} color="text-blue-400" />
+          <JudgmentStat label="失" value={scoreData.judgments.miss} color="text-red-400" />
+        </div>
 
-          <div className="flex items-center gap-2">
-            <Target className="w-5 h-5 text-green-400" />
-            <span className="text-amber-300/80">GREAT:</span>
-            <span className="text-amber-100 font-bold">{scoreData.judgments.great}</span>
-          </div>
+        {/* ボタン */}
+        <div className="flex gap-4">
+          <button
+            onClick={onRetry}
+            className="group relative px-8 py-3 overflow-hidden"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-[#c94a4a] to-[#a83232] rounded-sm" />
+            <div className="absolute inset-[2px] bg-[#1a0f0a] rounded-sm group-hover:bg-[#2d1f15] transition-colors" />
+            <span className="relative text-sm tracking-[0.2em] text-[#c94a4a]">
+              RETRY
+            </span>
+          </button>
 
-          <div className="flex items-center gap-2">
-            <Target className="w-5 h-5 text-blue-400" />
-            <span className="text-amber-300/80">GOOD:</span>
-            <span className="text-amber-100 font-bold">{scoreData.judgments.good}</span>
-          </div>
-
-          <div className="flex items-center gap-2 col-span-2">
-            <Target className="w-5 h-5 text-gray-400" />
-            <span className="text-amber-300/80">MISS:</span>
-            <span className="text-amber-100 font-bold">{scoreData.judgments.miss}</span>
-          </div>
+          <button
+            onClick={onBack}
+            className="group relative px-8 py-3 overflow-hidden"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-[#d4af37] to-[#b8972e] rounded-sm" />
+            <div className="absolute inset-[2px] bg-[#1a0f0a] rounded-sm group-hover:bg-[#2d1f15] transition-colors" />
+            <span className="relative text-sm tracking-[0.2em] text-[#d4af37]">
+              TITLE
+            </span>
+          </button>
         </div>
       </div>
+    </div>
+  );
+}
 
-      {/* ボタン */}
-      <div className="flex gap-4 mt-8">
-        <button
-          onClick={onRetry}
-          className="flex items-center gap-2 px-6 py-3 text-lg font-bold text-white bg-red-600 rounded-lg
-                     hover:bg-red-500 hover:scale-105 active:scale-95
-                     transition-all duration-150 shadow-lg"
-        >
-          <RotateCcw className="w-5 h-5" />
-          リトライ
-        </button>
-
-        <button
-          onClick={onBack}
-          className="flex items-center gap-2 px-6 py-3 text-lg font-bold text-amber-900 bg-amber-200 rounded-lg
-                     hover:bg-amber-100 hover:scale-105 active:scale-95
-                     transition-all duration-150 shadow-lg"
-        >
-          <Home className="w-5 h-5" />
-          タイトルへ
-        </button>
-      </div>
+// 判定統計コンポーネント
+function JudgmentStat({ label, value, color }: { label: string; value: number; color: string }) {
+  return (
+    <div className="flex items-center justify-between px-4 py-2">
+      <span className={`text-2xl ${color}`}
+            style={{ fontFamily: '"Hiragino Mincho ProN", "Yu Mincho", serif' }}>
+        {label}
+      </span>
+      <span className="text-xl font-light text-[#fff8e7]">{value}</span>
     </div>
   );
 }
