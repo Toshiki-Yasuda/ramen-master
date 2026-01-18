@@ -32,6 +32,9 @@ export const RamenDisplay: React.FC<RamenDisplayProps> = ({
     ? Math.min(1, (maxCombo - currentThreshold) / (nextThreshold - currentThreshold))
     : 1;
 
+  // レベルアップ検出
+  const isMaxed = progressToNext === 1 && level < 6;
+
   return (
     <motion.div
       className="flex flex-col items-center gap-4"
@@ -39,51 +42,102 @@ export const RamenDisplay: React.FC<RamenDisplayProps> = ({
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
     >
-      {/* メインラーメン表示 */}
+      {/* メインラーメン表示 - レベルアップ時に派手なアニメーション */}
       <motion.div
-        className="text-8xl md:text-9xl"
+        className="text-8xl md:text-9xl relative"
         animate={{
-          scale: [1, 1.05, 1],
+          scale: isMaxed ? [1, 1.15, 1.1, 1.2, 1] : [1, 1.05, 1],
           filter: level > 0 ? ['drop-shadow(0 0 0px gold)', 'drop-shadow(0 0 20px gold)', 'drop-shadow(0 0 0px gold)'] : 'drop-shadow(0 0 0px)',
+          rotateZ: isMaxed ? [-2, 2, -2, 0] : 0,
         }}
         transition={{
-          duration: 2,
-          repeat: Infinity,
-          ease: 'easeInOut',
+          duration: isMaxed ? 0.6 : 2,
+          repeat: isMaxed ? 0 : Infinity,
+          ease: isMaxed ? 'easeInOut' : 'easeInOut',
         }}
       >
         {currentStage.emoji}
+
+        {/* レベルアップ時のパーティクル効果 */}
+        {isMaxed && (
+          <>
+            <motion.span
+              className="absolute text-4xl"
+              initial={{ opacity: 1, x: 0, y: 0 }}
+              animate={{ opacity: 0, x: 30, y: -30 }}
+              transition={{ duration: 0.6 }}
+            >
+              ✨
+            </motion.span>
+            <motion.span
+              className="absolute text-4xl"
+              initial={{ opacity: 1, x: 0, y: 0 }}
+              animate={{ opacity: 0, x: -30, y: -30 }}
+              transition={{ duration: 0.6 }}
+            >
+              ✨
+            </motion.span>
+          </>
+        )}
       </motion.div>
 
       {/* ラーメン名とコンボ情報 */}
       <div className="text-center">
         <motion.h3
-          className="text-2xl md:text-3xl font-heading font-bold text-ramen-gold"
-          animate={{ scale: level > 0 ? [1, 1.05, 1] : 1 }}
-          transition={{ duration: 2, repeat: Infinity }}
+          className={`text-2xl md:text-3xl font-heading font-bold ${
+            isMaxed ? 'text-ramen-orange' : 'text-ramen-gold'
+          }`}
+          animate={{
+            scale: isMaxed ? [1, 1.15, 1.1] : level > 0 ? [1, 1.05, 1] : 1,
+          }}
+          transition={{ duration: isMaxed ? 0.6 : 2, repeat: isMaxed ? 0 : Infinity }}
         >
           Lv.{level + 1} {currentStage.name}
         </motion.h3>
         <p className="text-sm text-ramen-cream/70 mt-1">{currentStage.description}</p>
+
+        {/* レベルアップ通知 */}
+        {isMaxed && (
+          <motion.p
+            className="text-xs mt-2 text-ramen-orange font-bold"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3 }}
+          >
+            💫 レベルアップ！
+          </motion.p>
+        )}
       </div>
 
-      {/* 進捗バー */}
+      {/* 進捗バー - 強化版 */}
       <div className="w-full max-w-xs">
         <div className="text-xs text-ramen-cream/60 mb-1 flex justify-between">
           <span>コンボ進捗</span>
           <span>{maxCombo}/{nextThreshold}</span>
         </div>
-        <div className="relative h-3 bg-ramen-brown/30 rounded-full overflow-hidden border border-ramen-gold/30">
+        <div className="relative h-4 bg-ramen-brown/30 rounded-full overflow-hidden border border-ramen-gold/30">
           <motion.div
-            className="h-full bg-gradient-to-r from-ramen-gold to-ramen-orange shadow-lg shadow-ramen-gold/50"
-            animate={{ width: `${progressToNext * 100}%` }}
-            transition={{ duration: 0.3, type: 'tween' }}
+            className={`h-full shadow-lg ${
+              isMaxed
+                ? 'bg-gradient-to-r from-ramen-orange to-yellow-400 shadow-ramen-orange/70'
+                : 'bg-gradient-to-r from-ramen-gold to-ramen-orange shadow-ramen-gold/50'
+            }`}
+            animate={{
+              width: `${progressToNext * 100}%`,
+              boxShadow: isMaxed
+                ? ['0 0 10px rgba(255,165,0,0.5)', '0 0 20px rgba(255,165,0,0.8)', '0 0 10px rgba(255,165,0,0.5)']
+                : 'none',
+            }}
+            transition={{
+              width: { duration: 0.3, type: 'tween' },
+              boxShadow: { duration: 0.5, repeat: isMaxed ? Infinity : 0 },
+            }}
           />
         </div>
       </div>
 
       {/* 次のレベルプレビュー */}
-      {nextStage && (
+      {nextStage && !isMaxed && (
         <motion.div
           className="text-center text-sm text-ramen-cream/60 mt-2"
           initial={{ opacity: 0, y: 10 }}

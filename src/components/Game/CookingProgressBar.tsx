@@ -30,16 +30,35 @@ export const CookingProgressBar: React.FC<CookingProgressBarProps> = ({
 
   return (
     <div className="w-full space-y-4">
-      {/* スコア表示 */}
+      {/* スコア表示 - 強化版 */}
       <motion.div
-        className="text-center"
-        animate={{ scale: combo % 10 === 0 && combo > 0 ? [1, 1.1, 1] : 1 }}
+        className="text-center relative"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
         transition={{ duration: 0.3 }}
       >
-        <div className="text-4xl md:text-5xl font-heading font-bold text-ramen-gold">
-          {score.toLocaleString()}
-        </div>
-        <div className="text-sm text-ramen-cream/60">スコア</div>
+        {/* コンボ達成時の背景グロー */}
+        {combo % 10 === 0 && combo > 0 && (
+          <motion.div
+            className="absolute inset-0 rounded-lg bg-gradient-to-r from-ramen-gold/20 to-ramen-orange/20 blur-lg"
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 0.6 }}
+            transition={{ duration: 0.3 }}
+          />
+        )}
+
+        <motion.div
+          className="relative z-10"
+          animate={{
+            scale: combo % 10 === 0 && combo > 0 ? [1, 1.15, 1.05, 1.1, 1] : 1,
+          }}
+          transition={{ duration: 0.5, ease: 'easeOut' }}
+        >
+          <div className="text-4xl md:text-5xl font-heading font-bold text-ramen-gold">
+            {score.toLocaleString()}
+          </div>
+          <div className="text-sm text-ramen-cream/60">スコア</div>
+        </motion.div>
       </motion.div>
 
       {/* 調理進捗バー */}
@@ -74,35 +93,88 @@ export const CookingProgressBar: React.FC<CookingProgressBarProps> = ({
 
       {/* ステータスメーター（下部） */}
       <div className="grid grid-cols-3 gap-4 pt-2">
-        {/* コンボ */}
+        {/* コンボ - 強化版 */}
         <motion.div
-          className="glass-panel-dark px-3 py-2 rounded-lg text-center"
+          className="glass-panel-dark px-3 py-2 rounded-lg text-center relative overflow-hidden"
           animate={{
-            scale: combo > 0 && combo % 10 === 0 ? [1, 1.05, 1] : 1,
+            scale: combo > 0 && combo % 10 === 0 ? [1, 1.1, 1.05, 1.08, 1] : 1,
+            boxShadow:
+              combo > 0 && combo % 10 === 0
+                ? [
+                    '0 0 0px rgba(255,215,0,0)',
+                    '0 0 15px rgba(255,215,0,0.6)',
+                    '0 0 10px rgba(255,215,0,0.3)',
+                  ]
+                : '0 0 0px rgba(255,215,0,0)',
           }}
-          transition={{ duration: 0.3 }}
+          transition={{
+            duration: 0.4,
+            boxShadow: { duration: 0.4 },
+          }}
         >
-          <div className="text-xs text-ramen-cream/60 font-heading">COMBO</div>
-          <div className="text-2xl font-heading font-bold text-ramen-gold">
-            {combo}
+          {/* コンボ達成時のビジュアルエフェクト */}
+          {combo > 0 && combo % 10 === 0 && (
+            <motion.div
+              className="absolute inset-0 bg-gradient-to-r from-ramen-gold/30 to-transparent"
+              initial={{ x: -100 }}
+              animate={{ x: 100 }}
+              transition={{ duration: 0.6, repeat: 0 }}
+            />
+          )}
+
+          <div className="relative z-10">
+            <div className="text-xs text-ramen-cream/60 font-heading">COMBO</div>
+            <div className="text-2xl font-heading font-bold text-ramen-gold">
+              {combo}
+            </div>
           </div>
         </motion.div>
 
         {/* 精度 */}
-        <div className="glass-panel-dark px-3 py-2 rounded-lg text-center">
+        <motion.div
+          className="glass-panel-dark px-3 py-2 rounded-lg text-center"
+          animate={{
+            scale: accuracy > 90 ? [1, 1.02, 1] : 1,
+          }}
+          transition={{ duration: 0.3 }}
+        >
           <div className="text-xs text-ramen-cream/60 font-heading">精度</div>
-          <div className="text-2xl font-heading text-ramen-cream">
+          <motion.div
+            className="text-2xl font-heading"
+            animate={{
+              color: accuracy > 95 ? '#FFD700' : accuracy > 85 ? '#FFD700' : '#FFFFFF',
+            }}
+          >
             {accuracy.toFixed(1)}%
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
 
-        {/* フェーズ */}
-        <div className="glass-panel-dark px-3 py-2 rounded-lg text-center">
+        {/* フェーズ - 強化版 */}
+        <motion.div
+          className="glass-panel-dark px-3 py-2 rounded-lg text-center"
+          initial={{ scale: 0.8 }}
+          animate={{ scale: 1 }}
+          transition={{ duration: 0.3 }}
+        >
           <div className="text-xs text-ramen-cream/60 font-heading">段階</div>
-          <div className="text-lg font-heading text-ramen-orange">
+          <motion.div
+            className="text-lg font-heading font-bold"
+            animate={{
+              color:
+                currentPhase === 'complete'
+                  ? ['#FFD700', '#FF8C00', '#FFD700']
+                  : currentPhase === 'oil_cut'
+                    ? '#FF8C00'
+                    : '#FFD700',
+            }}
+            transition={{
+              duration: currentPhase === 'complete' ? 0.8 : 1,
+              repeat: currentPhase === 'complete' ? Infinity : 0,
+            }}
+          >
             {phaseLabels[currentPhase]}
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </div>
     </div>
   );

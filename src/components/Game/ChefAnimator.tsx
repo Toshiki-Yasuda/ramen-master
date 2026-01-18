@@ -9,29 +9,34 @@ interface ChefAnimatorProps {
 // 各段階のアニメーション定義
 const phaseAnimations: Record<CookingPhase, any> = {
   soup: {
-    scale: [1, 1.05, 1],
+    scale: [1, 1.08, 0.98, 1.05, 1],
     opacity: [0.8, 1, 0.9],
-    transition: { duration: 2, repeat: 3 },
+    rotateZ: [-2, 2, -1, 0],
+    transition: { duration: 2.5, repeat: 3, ease: 'easeInOut' },
   },
   oil_cut: {
-    rotateZ: [-5, 5, -5],
+    rotateZ: [-8, 8, -6, 6, -4, 4, 0],
+    y: [-5, 5, -5, 5, 0],
     opacity: [0.9, 1, 0.95],
-    transition: { duration: 0.6, repeat: 5 },
+    transition: { duration: 0.5, repeat: Infinity, ease: 'easeInOut' },
   },
   noodles: {
-    y: [0, -5, 0],
+    y: [0, -8, -2, -6, 0],
+    x: [-2, 2, -1, 0],
     opacity: [0.9, 1, 0.9],
-    transition: { duration: 1.2, repeat: 3 },
+    transition: { duration: 1.4, repeat: 3, ease: 'easeInOut' },
   },
   topping: {
-    scale: [1, 1.02, 1],
-    opacity: [0.85, 1, 0.9],
-    transition: { duration: 1, repeat: 2 },
+    scale: [1, 1.04, 1.02, 1.03, 1],
+    rotateZ: [-1, 1, -0.5, 0],
+    opacity: [0.85, 1, 0.95],
+    transition: { duration: 1.2, repeat: 2, ease: 'easeInOut' },
   },
   complete: {
-    scale: 1,
+    scale: [1, 1.1, 1.05, 1.15, 1],
     opacity: 1,
-    transition: { duration: 0.5 },
+    rotateZ: [0, -5, 5, -3, 0],
+    transition: { duration: 0.8 },
   },
 };
 
