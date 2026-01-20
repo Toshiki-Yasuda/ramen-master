@@ -207,6 +207,7 @@ export class GameEngine {
 
   // ゲーム状態
   private isRunning: boolean = false;
+  private isEndingAnimation: boolean = false;
   private beatmap: Beatmap | null = null;
   private noteGraphics: Map<number, Container> = new Map();
 
@@ -1188,6 +1189,8 @@ export class GameEngine {
       return;
     }
 
+    this.isEndingAnimation = true;
+
     const width = this.app.screen.width;
     const height = this.app.screen.height;
 
@@ -1248,6 +1251,7 @@ export class GameEngine {
           // クリーンアップ
           overlay.destroy();
           if (endingSprite) endingSprite.destroy();
+          this.isEndingAnimation = false;
           this.onGameEnd?.();
         }, 1500); // 音声再生時間を考慮
       }
@@ -1418,7 +1422,7 @@ export class GameEngine {
   private safeSetTimeout(callback: () => void, ms: number): number {
     const id = window.setTimeout(() => {
       this.activeTimers.delete(id);
-      if (this.isRunning || ms === ANIMATION_CONFIG.GAME_END_DELAY) {
+      if (this.isRunning || this.isEndingAnimation || ms === ANIMATION_CONFIG.GAME_END_DELAY) {
         callback();
       }
     }, ms);
