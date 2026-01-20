@@ -38,18 +38,51 @@ const COLORS = {
   SAKURA: 0xffb7c5,
 } as const;
 
-// ゲーム設定（横幅フル活用版）
-const GAME_CONFIG = {
+// 基準解像度（この解像度を100%としてスケーリング）
+const BASE_RESOLUTION = {
+  WIDTH: 1280,
+  HEIGHT: 720,
+} as const;
+
+// ゲーム設定（基準解像度での値）
+const BASE_GAME_CONFIG = {
   JUDGE_LINE_X: 150,          // 判定ライン位置（左端寄り）
-  NOTE_SPEED: 350,            // ノーツ速度（速くしてリズム感向上）
-  NOTE_WIDTH: 50,             // ノーツ幅（コンパクトに）
-  NOTE_HEIGHT: 50,            // ノーツ高さ（正方形に近く）
+  NOTE_SPEED: 350,            // ノーツ速度
+  NOTE_SIZE: 50,              // ノーツサイズ（正方形）
   CHOPSTICK_WIDTH: 10,        // 箸の幅
-  CHOPSTICK_GAP: 60,          // 箸の間隔（ノーツに合わせて）
+  CHOPSTICK_GAP: 60,          // 箸の間隔
   LANE_HEIGHT: 80,            // レーンの高さ
   LANE_BOTTOM_MARGIN: 80,     // レーンの下端からの余白
-  GLOW_UPDATE_INTERVAL: 3,    // フレーム間隔（パフォーマンス最適化）
+  GLOW_UPDATE_INTERVAL: 3,    // フレーム間隔
 } as const;
+
+// スケール係数を計算してゲーム設定を返す
+function getScaledConfig(screenWidth: number, screenHeight: number) {
+  // 画面サイズに応じたスケール係数（高さベース + 幅の最小値）
+  const scaleY = screenHeight / BASE_RESOLUTION.HEIGHT;
+  const scaleX = screenWidth / BASE_RESOLUTION.WIDTH;
+  const scale = Math.min(scaleX, scaleY, 1.5); // 最大1.5倍まで
+  const minScale = Math.max(scale, 0.5); // 最小0.5倍まで
+
+  return {
+    JUDGE_LINE_X: Math.max(80, BASE_GAME_CONFIG.JUDGE_LINE_X * scaleX),
+    NOTE_SPEED: BASE_GAME_CONFIG.NOTE_SPEED * scaleX,
+    NOTE_WIDTH: Math.max(30, BASE_GAME_CONFIG.NOTE_SIZE * minScale),
+    NOTE_HEIGHT: Math.max(30, BASE_GAME_CONFIG.NOTE_SIZE * minScale),
+    CHOPSTICK_WIDTH: Math.max(6, BASE_GAME_CONFIG.CHOPSTICK_WIDTH * minScale),
+    CHOPSTICK_GAP: Math.max(40, BASE_GAME_CONFIG.CHOPSTICK_GAP * minScale),
+    LANE_HEIGHT: Math.max(60, BASE_GAME_CONFIG.LANE_HEIGHT * minScale),
+    LANE_BOTTOM_MARGIN: Math.max(40, BASE_GAME_CONFIG.LANE_BOTTOM_MARGIN * minScale),
+    GLOW_UPDATE_INTERVAL: BASE_GAME_CONFIG.GLOW_UPDATE_INTERVAL,
+    SCALE: minScale,  // UIスケール用
+  };
+}
+
+// 型定義
+type GameConfig = ReturnType<typeof getScaledConfig>;
+
+// デフォルト設定（初期化前のフォールバック用）
+const DEFAULT_GAME_CONFIG: GameConfig = getScaledConfig(BASE_RESOLUTION.WIDTH, BASE_RESOLUTION.HEIGHT);
 
 // パーティクル設定
 const PARTICLE_CONFIG = {
@@ -126,6 +159,9 @@ export class GameEngine {
   private audioEngine: AudioEngine;
   private noteManager: NoteManager;
 
+  // 画面サイズに応じた動的設定
+  private config: GameConfig = DEFAULT_GAME_CONFIG;
+
   // PixiJS コンテナ
   private gameContainer: Container | null = null;
   private bgContainer: Container | null = null;
@@ -197,6 +233,10 @@ export class GameEngine {
       autoDensity: true,
       antialias: true,
     });
+
+    // 画面サイズに応じてスケール設定を計算
+    this.config = getScaledConfig(this.app.screen.width, this.app.screen.height);
+    console.log(`画面サイズ: ${this.app.screen.width}x${this.app.screen.height}, スケール: ${this.config.SCALE.toFixed(2)}`);
 
     await this.audioEngine.init();
     this.setupContainers();
@@ -392,9 +432,9 @@ export class GameEngine {
 
     const width = this.app.screen.width;
     const height = this.app.screen.height;
-    const laneHeight = GAME_CONFIG.LANE_HEIGHT;
+    const laneHeight = this.config.LANE_HEIGHT;
     // レーンを画面下部に配置
-    const laneY = height - GAME_CONFIG.LANE_BOTTOM_MARGIN - laneHeight / 2;
+    const laneY = height - this.config.LANE_BOTTOM_MARGIN - laneHeight / 2;
 
     // レーン背景（暗いストライプ）
     const laneBg = new Graphics();
@@ -425,13 +465,13 @@ export class GameEngine {
 
     // 判定エリアハイライト（左端）
     const judgeArea = new Graphics();
-    judgeArea.rect(0, laneY - laneHeight / 2, GAME_CONFIG.JUDGE_LINE_X + 50, laneHeight)
+    judgeArea.rect(0, laneY - laneHeight / 2, this.config.JUDGE_LINE_X + 50, laneHeight)
       .fill({ color: COLORS.VERMILION, alpha: 0.1 });
     this.laneContainer.addChild(judgeArea);
 
     // 判定ライン強調
     const judgeLine = new Graphics();
-    judgeLine.rect(GAME_CONFIG.JUDGE_LINE_X - 2, laneY - laneHeight / 2, 4, laneHeight)
+    judgeLine.rect(this.config.JUDGE_LINE_X - 2, laneY - laneHeight / 2, 4, laneHeight)
       .fill({ color: COLORS.GOLD, alpha: 0.6 });
     this.laneContainer.addChild(judgeLine);
   }
@@ -443,7 +483,7 @@ export class GameEngine {
     if (!this.app || !this.bowlContainer) return;
 
     const height = this.app.screen.height;
-    const bowlCenterX = GAME_CONFIG.JUDGE_LINE_X;
+    const bowlCenterX = this.config.JUDGE_LINE_X;
     const bowlY = height - 80;
 
     // 丼本体
@@ -505,22 +545,23 @@ export class GameEngine {
     this.cachedHitFlash.rect(0, 0, width, height).fill({ color: COLORS.GOLD, alpha: 0 });
     this.effectsContainer.addChild(this.cachedHitFlash);
 
-    // 判定テキスト（日本語）
+    // 判定テキスト（日本語）- スケール対応
+    const judgmentFontSize = Math.max(48, 96 * this.config.SCALE);
     const judgmentStyle = new TextStyle({
       fontFamily: '"Hiragino Mincho ProN", "Yu Mincho", "Shippori Mincho", serif',
-      fontSize: 96,
+      fontSize: judgmentFontSize,
       fontWeight: 'bold',
       fill: COLORS.GOLD,
-      stroke: { color: 0x000000, width: 4 },
+      stroke: { color: 0x000000, width: Math.max(2, 4 * this.config.SCALE) },
       dropShadow: {
         color: COLORS.GOLD,
-        blur: 20,
+        blur: 20 * this.config.SCALE,
         distance: 0,
         alpha: 0.8,
       },
     });
     // レーンのY座標（判定テキスト配置用）
-    const laneY = height - GAME_CONFIG.LANE_BOTTOM_MARGIN - GAME_CONFIG.LANE_HEIGHT / 2;
+    const laneY = height - this.config.LANE_BOTTOM_MARGIN - this.config.LANE_HEIGHT / 2;
 
     this.judgmentText = new Text({ text: '', style: judgmentStyle });
     this.judgmentText.anchor.set(0.5);
@@ -529,62 +570,70 @@ export class GameEngine {
     this.judgmentText.alpha = 0;
     this.effectsContainer.addChild(this.judgmentText);
 
-    // 判定サブテキスト
+    // 判定サブテキスト - スケール対応
+    const subFontSize = Math.max(10, 16 * this.config.SCALE);
     const subStyle = new TextStyle({
       fontFamily: '"Helvetica Neue", Arial, sans-serif',
-      fontSize: 16,
+      fontSize: subFontSize,
       fontWeight: '300',
       fill: COLORS.CREAM,
-      letterSpacing: 6,
+      letterSpacing: 6 * this.config.SCALE,
     });
     this.judgmentSubText = new Text({ text: '', style: subStyle });
     this.judgmentSubText.anchor.set(0.5);
     this.judgmentSubText.x = width / 3;
-    this.judgmentSubText.y = laneY - 40;  // 判定テキストの下
+    this.judgmentSubText.y = laneY - 40 * this.config.SCALE;  // 判定テキストの下
     this.judgmentSubText.alpha = 0;
     this.effectsContainer.addChild(this.judgmentSubText);
 
-    // スコア表示エリア（背景付き）
+    // スコア表示エリア（背景付き）- スケール対応
+    const boxWidth = Math.max(120, 180 * this.config.SCALE);
+    const boxHeight = Math.max(50, 70 * this.config.SCALE);
+    const boxX = 20 * this.config.SCALE;
+    const boxY = 10 * this.config.SCALE;
     const scoreBox = new Graphics();
-    scoreBox.roundRect(20, 10, 180, 70, 8).fill({ color: 0x000000, alpha: 0.4 });
-    scoreBox.roundRect(20, 10, 180, 70, 8).stroke({ color: COLORS.GOLD, width: 1, alpha: 0.3 });
+    scoreBox.roundRect(boxX, boxY, boxWidth, boxHeight, 8 * this.config.SCALE).fill({ color: 0x000000, alpha: 0.4 });
+    scoreBox.roundRect(boxX, boxY, boxWidth, boxHeight, 8 * this.config.SCALE).stroke({ color: COLORS.GOLD, width: 1, alpha: 0.3 });
     this.uiContainer.addChild(scoreBox);
 
-    // スコアラベル
+    // スコアラベル - スケール対応
+    const labelFontSize = Math.max(8, 10 * this.config.SCALE);
     const labelStyle = new TextStyle({
       fontFamily: '"Helvetica Neue", Arial, sans-serif',
-      fontSize: 10,
+      fontSize: labelFontSize,
       fontWeight: '600',
       fill: COLORS.GOLD,
-      letterSpacing: 4,
+      letterSpacing: 4 * this.config.SCALE,
     });
     const scoreLabel = new Text({ text: 'SCORE', style: labelStyle });
-    scoreLabel.x = 35;
-    scoreLabel.y = 20;
+    scoreLabel.x = boxX + 15 * this.config.SCALE;
+    scoreLabel.y = boxY + 10 * this.config.SCALE;
     this.uiContainer.addChild(scoreLabel);
 
-    // スコアテキスト
+    // スコアテキスト - スケール対応
+    const scoreFontSize = Math.max(18, 32 * this.config.SCALE);
     const scoreStyle = new TextStyle({
       fontFamily: '"Helvetica Neue", Arial, sans-serif',
-      fontSize: 32,
+      fontSize: scoreFontSize,
       fontWeight: '200',
       fill: COLORS.CREAM,
       letterSpacing: 2,
     });
     this.scoreText = new Text({ text: '0', style: scoreStyle });
-    this.scoreText.x = 35;
-    this.scoreText.y = 38;
+    this.scoreText.x = boxX + 15 * this.config.SCALE;
+    this.scoreText.y = boxY + 28 * this.config.SCALE;
     this.uiContainer.addChild(this.scoreText);
 
-    // コンボ表示
+    // コンボ表示 - スケール対応
+    const comboFontSize = Math.max(32, 64 * this.config.SCALE);
     const comboStyle = new TextStyle({
       fontFamily: '"Helvetica Neue", Arial, sans-serif',
-      fontSize: 64,
+      fontSize: comboFontSize,
       fontWeight: '100',
       fill: COLORS.GOLD_LIGHT,
       dropShadow: {
         color: COLORS.GOLD,
-        blur: 15,
+        blur: 15 * this.config.SCALE,
         distance: 0,
         alpha: 0.5,
       },
@@ -592,46 +641,50 @@ export class GameEngine {
     this.comboText = new Text({ text: '', style: comboStyle });
     this.comboText.anchor.set(0.5);
     this.comboText.x = width / 2;
-    this.comboText.y = height - 100;
+    this.comboText.y = height - 100 * this.config.SCALE;
     this.uiContainer.addChild(this.comboText);
 
-    // コンボラベル
+    // コンボラベル - スケール対応
+    const comboLabelFontSize = Math.max(8, 12 * this.config.SCALE);
     const comboLabelStyle = new TextStyle({
       fontFamily: '"Helvetica Neue", Arial, sans-serif',
-      fontSize: 12,
+      fontSize: comboLabelFontSize,
       fontWeight: '400',
       fill: COLORS.GOLD,
-      letterSpacing: 4,
+      letterSpacing: 4 * this.config.SCALE,
     });
     this.comboLabel = new Text({ text: 'COMBO', style: comboLabelStyle });
     this.comboLabel.anchor.set(0.5);
     this.comboLabel.x = width / 2;
-    this.comboLabel.y = height - 55;
+    this.comboLabel.y = height - 55 * this.config.SCALE;
     this.comboLabel.alpha = 0;
     this.uiContainer.addChild(this.comboLabel);
 
-    // プログレスバー背景
+    // プログレスバー背景 - スケール対応
+    const progressWidth = Math.min(300, width * 0.4);
+    const progressHeight = Math.max(4, 6 * this.config.SCALE);
     this.progressBar = new Graphics();
-    this.progressBar.roundRect(width / 2 - 150, 15, 300, 6, 3).fill({ color: 0x000000, alpha: 0.5 });
-    this.progressBar.roundRect(width / 2 - 150, 15, 300, 6, 3).stroke({ color: COLORS.GOLD, width: 1, alpha: 0.3 });
+    this.progressBar.roundRect(width / 2 - progressWidth / 2, 15 * this.config.SCALE, progressWidth, progressHeight, 3).fill({ color: 0x000000, alpha: 0.5 });
+    this.progressBar.roundRect(width / 2 - progressWidth / 2, 15 * this.config.SCALE, progressWidth, progressHeight, 3).stroke({ color: COLORS.GOLD, width: 1, alpha: 0.3 });
     this.uiContainer.addChild(this.progressBar);
 
     // プログレスバー本体
     this.progressFill = new Graphics();
     this.uiContainer.addChild(this.progressFill);
 
-    // 曲タイトル
+    // 曲タイトル - スケール対応
+    const titleFontSize = Math.max(10, 14 * this.config.SCALE);
     const titleStyle = new TextStyle({
       fontFamily: '"Hiragino Mincho ProN", "Yu Mincho", serif',
-      fontSize: 14,
+      fontSize: titleFontSize,
       fontWeight: '400',
       fill: COLORS.CREAM,
     });
     const titleText = new Text({ text: '', style: titleStyle });
     titleText.anchor.set(0.5, 0);
     titleText.x = width / 2;
-    titleText.y = 28;
-    titleText.alpha = 0.6; // TextStyle外でalphaを設定
+    titleText.y = 28 * this.config.SCALE;
+    titleText.alpha = 0.6;
     titleText.name = 'titleText';
     this.uiContainer.addChild(titleText);
   }
@@ -643,14 +696,14 @@ export class GameEngine {
     if (!this.chopsticks || !this.chopsticksGlow || !this.app) return;
 
     const screenHeight = this.app.screen.height;
-    const x = GAME_CONFIG.JUDGE_LINE_X;
-    const gap = GAME_CONFIG.CHOPSTICK_GAP;
-    const w = GAME_CONFIG.CHOPSTICK_WIDTH;
+    const x = this.config.JUDGE_LINE_X;
+    const gap = this.config.CHOPSTICK_GAP;
+    const w = this.config.CHOPSTICK_WIDTH;
 
     // レーンの位置に合わせた箸の高さ
-    const laneY = screenHeight - GAME_CONFIG.LANE_BOTTOM_MARGIN - GAME_CONFIG.LANE_HEIGHT / 2;
-    const chopstickTop = laneY - GAME_CONFIG.LANE_HEIGHT / 2 - 20;
-    const chopstickHeight = GAME_CONFIG.LANE_HEIGHT + 40;
+    const laneY = screenHeight - this.config.LANE_BOTTOM_MARGIN - this.config.LANE_HEIGHT / 2;
+    const chopstickTop = laneY - this.config.LANE_HEIGHT / 2 - 20;
+    const chopstickHeight = this.config.LANE_HEIGHT + 40;
 
     this.chopsticks.clear();
     this.chopsticksGlow.clear();
@@ -787,7 +840,7 @@ export class GameEngine {
 
     // アニメーション更新（グロー更新頻度を最適化）
     this.glowPhase += PARTICLE_CONFIG.GLOW.PHASE_INCREMENT;
-    if (this.frameCount % GAME_CONFIG.GLOW_UPDATE_INTERVAL === 0) {
+    if (this.frameCount % this.config.GLOW_UPDATE_INTERVAL === 0) {
       this.drawChopsticks();
     }
 
@@ -831,8 +884,11 @@ export class GameEngine {
     const progress = Math.min(currentTime / totalTime, 1);
 
     const width = this.app.screen.width;
+    const progressWidth = Math.min(300, width * 0.4);
+    const progressHeight = Math.max(2, 4 * this.config.SCALE);
+    const progressY = 17 * this.config.SCALE;
     this.progressFill.clear();
-    this.progressFill.roundRect(width / 2 - 148, 17, 296 * progress, 2, 1)
+    this.progressFill.roundRect(width / 2 - progressWidth / 2 + 2, progressY, (progressWidth - 4) * progress, progressHeight, 1)
       .fill(COLORS.GOLD);
   }
 
@@ -845,8 +901,8 @@ export class GameEngine {
     const screenWidth = this.app.screen.width;
     const screenHeight = this.app.screen.height;
     // レーンと同じ位置（画面下部）
-    const laneY = screenHeight - GAME_CONFIG.LANE_BOTTOM_MARGIN - GAME_CONFIG.LANE_HEIGHT / 2;
-    const noteY = laneY - GAME_CONFIG.NOTE_HEIGHT / 2;
+    const laneY = screenHeight - this.config.LANE_BOTTOM_MARGIN - this.config.LANE_HEIGHT / 2;
+    const noteY = laneY - this.config.NOTE_HEIGHT / 2;
 
     this.noteManager.getNotes().forEach((note, index) => {
       if (note.hit) {
@@ -856,9 +912,9 @@ export class GameEngine {
       }
 
       const timeDiff = note.t - currentTime;
-      const noteX = GAME_CONFIG.JUDGE_LINE_X + timeDiff * GAME_CONFIG.NOTE_SPEED;
+      const noteX = this.config.JUDGE_LINE_X + timeDiff * this.config.NOTE_SPEED;
 
-      if (noteX > screenWidth + GAME_CONFIG.NOTE_WIDTH || noteX < -GAME_CONFIG.NOTE_WIDTH) {
+      if (noteX > screenWidth + this.config.NOTE_WIDTH || noteX < -this.config.NOTE_WIDTH) {
         const container = this.noteGraphics.get(index);
         if (container) container.visible = false;
         return;
@@ -874,11 +930,11 @@ export class GameEngine {
       if (!container) return;
 
       container.visible = true;
-      container.x = noteX - GAME_CONFIG.NOTE_WIDTH / 2;
+      container.x = noteX - this.config.NOTE_WIDTH / 2;
       container.y = noteY;
 
       // 判定ラインに近づくほど光る
-      const distance = Math.abs(noteX - GAME_CONFIG.JUDGE_LINE_X);
+      const distance = Math.abs(noteX - this.config.JUDGE_LINE_X);
       const glowIntensity = Math.max(0, 1 - distance / 200);
 
       // children: [0]=glow, [1]=shadow, [2]=note
@@ -895,7 +951,7 @@ export class GameEngine {
    */
   private createNoteGraphic(): Container {
     const container = new Container();
-    const size = GAME_CONFIG.NOTE_WIDTH;
+    const size = this.config.NOTE_WIDTH;
     const radius = size / 2;
 
     // グロー（背景）
@@ -932,7 +988,7 @@ export class GameEngine {
     if (!this.app || !this.effectsContainer || Math.random() > 0.2) return;
 
     const height = this.app.screen.height;
-    const bowlX = GAME_CONFIG.JUDGE_LINE_X;
+    const bowlX = this.config.JUDGE_LINE_X;
 
     const g = new Graphics();
     const size = 4 + Math.random() * 6;
@@ -1207,9 +1263,9 @@ export class GameEngine {
 
       if (judgment !== 'MISS') {
         // レーンのY座標でパーティクル発生
-        const laneY = this.app.screen.height - GAME_CONFIG.LANE_BOTTOM_MARGIN - GAME_CONFIG.LANE_HEIGHT / 2;
+        const laneY = this.app.screen.height - this.config.LANE_BOTTOM_MARGIN - this.config.LANE_HEIGHT / 2;
         const particleCount = judgment === 'PERFECT' ? 24 : judgment === 'GREAT' ? 16 : 12;
-        this.spawnHitParticles(GAME_CONFIG.JUDGE_LINE_X, laneY, JUDGMENT_COLORS[judgment], particleCount);
+        this.spawnHitParticles(this.config.JUDGE_LINE_X, laneY, JUDGMENT_COLORS[judgment], particleCount);
 
         // PERFECTでフラッシュ
         if (judgment === 'PERFECT') {

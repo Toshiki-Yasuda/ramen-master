@@ -4,12 +4,12 @@ interface TitleScreenProps {
 
 export function TitleScreen({ onStart }: TitleScreenProps) {
   return (
-    <div className="relative flex flex-col items-center justify-center min-h-screen bg-[#1a0f0a] overflow-hidden">
+    <div className="relative flex flex-col items-center justify-center min-h-screen bg-[#1a0f0a] overflow-hidden px-4">
       {/* 背景グラデーション */}
       <div className="absolute inset-0 bg-gradient-to-b from-[#2d1f15] to-[#1a0f0a]" />
 
       {/* 装飾：暖かいグロー */}
-      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-[#c94a4a]/10 rounded-full blur-3xl" />
+      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[300px] sm:w-[450px] md:w-[600px] h-[150px] sm:h-[225px] md:h-[300px] bg-[#c94a4a]/10 rounded-full blur-3xl" />
 
       {/* 縦線の装飾 */}
       <div className="absolute inset-0 flex justify-around opacity-[0.03] pointer-events-none">
@@ -19,13 +19,13 @@ export function TitleScreen({ onStart }: TitleScreenProps) {
       </div>
 
       {/* コンテンツ */}
-      <div className="relative z-10 flex flex-col items-center">
+      <div className="relative z-10 flex flex-col items-center w-full max-w-md">
         {/* タイトル画像 */}
-        <div className="mb-6">
+        <div className="mb-4 sm:mb-6">
           <img
             src="/ramen-master/images/title.png"
             alt="湯切りますたー"
-            className="w-96 h-auto drop-shadow-2xl"
+            className="w-48 sm:w-72 md:w-96 h-auto drop-shadow-2xl"
             onError={(e) => {
               e.currentTarget.style.display = 'none';
             }}
@@ -33,40 +33,41 @@ export function TitleScreen({ onStart }: TitleScreenProps) {
         </div>
 
         {/* タイトルテキスト */}
-        <h1 className="text-5xl font-bold text-[#fff8e7] mb-3 tracking-wider"
+        <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold text-[#fff8e7] mb-2 sm:mb-3 tracking-wider text-center"
             style={{ fontFamily: '"Hiragino Mincho ProN", "Yu Mincho", serif' }}>
           湯切りますたー
         </h1>
 
         {/* サブタイトル */}
-        <p className="text-[#d4af37] mb-16 text-sm tracking-[0.3em] uppercase">
+        <p className="text-[#d4af37] mb-8 sm:mb-12 md:mb-16 text-xs sm:text-sm tracking-[0.2em] sm:tracking-[0.3em] uppercase text-center">
           Rhythm of Ramen Master
         </p>
 
         {/* スタートボタン */}
         <button
           onClick={onStart}
-          className="group relative px-16 py-4 overflow-hidden"
+          className="group relative px-8 sm:px-12 md:px-16 py-3 sm:py-4 overflow-hidden active:scale-95 transition-transform"
         >
           {/* ボタン背景 */}
           <div className="absolute inset-0 bg-gradient-to-r from-[#d4af37] to-[#b8972e] rounded-sm" />
           <div className="absolute inset-[2px] bg-[#1a0f0a] rounded-sm group-hover:bg-[#2d1f15] transition-colors" />
 
           {/* ボタンテキスト */}
-          <span className="relative text-xl font-medium text-[#d4af37] tracking-[0.2em]"
+          <span className="relative text-base sm:text-lg md:text-xl font-medium text-[#d4af37] tracking-[0.15em] sm:tracking-[0.2em]"
                 style={{ fontFamily: '"Hiragino Mincho ProN", "Yu Mincho", serif' }}>
             はじめる
           </span>
         </button>
 
         {/* 操作説明 */}
-        <div className="mt-20 text-[#fff8e7]/40 text-xs tracking-wider">
-          <p>SPACE KEY / TAP TO PLAY</p>
+        <div className="mt-10 sm:mt-16 md:mt-20 text-[#fff8e7]/40 text-[10px] sm:text-xs tracking-wider text-center">
+          <p className="hidden sm:block">SPACE KEY / TAP TO PLAY</p>
+          <p className="sm:hidden">TAP TO PLAY</p>
         </div>
       </div>
 
       {/* 湯気エフェクト */}
-      <div className="absolute bottom-0 left-0 right-0 h-40 pointer-events-none overflow-hidden">
+      <div className="absolute bottom-0 left-0 right-0 h-20 sm:h-32 md:h-40 pointer-events-none overflow-hidden">
         <div className="steam-effect opacity-20" />
       </div>
     </div>
