@@ -362,6 +362,7 @@ export class GameEngine {
       happy: '/ramen-master/images/chef/happy.png',    // GREAT
       perfect: '/ramen-master/images/chef/perfect.png', // PERFECT
       serve: '/ramen-master/images/chef/serve.png',    // 完成（リザルト用）
+      thanks: '/ramen-master/images/chef/thanks.png',  // エンディング：ありがとうございました
     };
 
     const height = this.app.screen.height;
@@ -1179,7 +1180,7 @@ export class GameEngine {
   }
 
   /**
-   * 終了アニメーション（店主ズームイン）
+   * 終了アニメーション（店主ズームイン + ありがとうございました）
    */
   private async playEndingAnimation(): Promise<void> {
     if (!this.app || !this.gameContainer) {
@@ -1195,13 +1196,13 @@ export class GameEngine {
     overlay.rect(0, 0, width, height).fill({ color: 0x000000, alpha: 0 });
     this.app.stage.addChild(overlay);
 
-    // 店主画像（serve）を中央に配置
-    const serveSprite = this.chefSprites.get('serve');
+    // 店主画像（thanks: ありがとうございました）を中央に配置
+    const thanksSprite = this.chefSprites.get('thanks');
     let endingSprite: Sprite | null = null;
 
-    if (serveSprite) {
+    if (thanksSprite) {
       // 新しいスプライトを作成（元のは非表示に）
-      endingSprite = new Sprite(serveSprite.texture);
+      endingSprite = new Sprite(thanksSprite.texture);
       endingSprite.anchor.set(0.5);
       endingSprite.x = width / 2;
       endingSprite.y = height / 2;
@@ -1213,6 +1214,7 @@ export class GameEngine {
     // アニメーション
     let frame = 0;
     const totalFrames = 60; // 約1秒
+    let sePlayed = false;
 
     const animate = () => {
       frame++;
@@ -1226,22 +1228,28 @@ export class GameEngine {
       // 店主画像をズームイン＆フェードイン
       if (endingSprite) {
         endingSprite.alpha = easeOut;
-        const targetScale = Math.min(height * 0.9 / endingSprite.texture.height, 1.2);
+        const targetScale = Math.min(height * 0.85 / endingSprite.texture.height, 1.0);
         endingSprite.scale.set(0.3 + (targetScale - 0.3) * easeOut);
         // 少し上下に揺れる
-        endingSprite.y = height / 2 + Math.sin(frame * 0.1) * 5;
+        endingSprite.y = height / 2 + Math.sin(frame * 0.1) * 3;
+      }
+
+      // 画像が表示されたら音声を再生
+      if (!sePlayed && progress > 0.3) {
+        sePlayed = true;
+        this.audioEngine.playSE('/ramen-master/audio/se/thanks.m4a');
       }
 
       if (frame < totalFrames) {
         this.safeRequestAnimationFrame(animate);
       } else {
-        // アニメーション完了後、少し待ってからリザルトへ
+        // アニメーション完了後、音声が終わるまで待ってからリザルトへ
         this.safeSetTimeout(() => {
           // クリーンアップ
           overlay.destroy();
           if (endingSprite) endingSprite.destroy();
           this.onGameEnd?.();
-        }, 800);
+        }, 1500); // 音声再生時間を考慮
       }
     };
 

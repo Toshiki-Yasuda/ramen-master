@@ -9,6 +9,8 @@ export class AudioEngine {
   private bgmBuffer: AudioBuffer | null = null;
   private bgmSource: AudioBufferSourceNode | null = null;
   private gainNode: GainNode | null = null;
+  private seGainNode: GainNode | null = null;  // SE用ゲインノード
+  private seCache: Map<string, AudioBuffer> = new Map();  // SEキャッシュ
   private startTime: number = 0; // ゲーム開始時のAudioContext時刻
   private isPlaying: boolean = false;
 
@@ -22,6 +24,10 @@ export class AudioEngine {
     this.context = new AudioContext();
     this.gainNode = this.context.createGain();
     this.gainNode.connect(this.context.destination);
+
+    // SE用ゲインノード
+    this.seGainNode = this.context.createGain();
+    this.seGainNode.connect(this.context.destination);
 
     // サスペンド状態の場合はレジューム
     if (this.context.state === 'suspended') {
@@ -134,6 +140,51 @@ export class AudioEngine {
   }
 
   /**
+   * SE音量を設定（0.0 ~ 1.0）
+   */
+  setSEVolume(volume: number): void {
+    if (this.seGainNode) {
+      this.seGainNode.gain.value = Math.max(0, Math.min(1, volume));
+    }
+  }
+
+  /**
+   * SEを再生
+   * @param url SE音声ファイルのURL
+   */
+  async playSE(url: string): Promise<void> {
+    if (!this.context || !this.seGainNode) {
+      console.warn('AudioEngine not initialized');
+      return;
+    }
+
+    try {
+      // キャッシュを確認
+      let buffer = this.seCache.get(url);
+
+      if (!buffer) {
+        // キャッシュにない場合は読み込み
+        const response = await fetch(url);
+        if (!response.ok) {
+          console.warn(`SE not found: ${url}`);
+          return;
+        }
+        const arrayBuffer = await response.arrayBuffer();
+        buffer = await this.context.decodeAudioData(arrayBuffer);
+        this.seCache.set(url, buffer);
+      }
+
+      // 再生
+      const source = this.context.createBufferSource();
+      source.buffer = buffer;
+      source.connect(this.seGainNode);
+      source.start();
+    } catch (error) {
+      console.warn('Failed to play SE:', error);
+    }
+  }
+
+  /**
    * リソースを解放
    */
   dispose(): void {
@@ -144,5 +195,7 @@ export class AudioEngine {
     }
     this.bgmBuffer = null;
     this.gainNode = null;
+    this.seGainNode = null;
+    this.seCache.clear();
   }
 }
