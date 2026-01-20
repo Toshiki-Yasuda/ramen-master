@@ -1169,11 +1169,20 @@ export class GameEngine {
 
     const lastNoteTime = this.beatmap.notes[this.beatmap.notes.length - 1]?.t ?? 0;
     const isAfterLastNote = currentTime > lastNoteTime + 2;
+    const allProcessed = this.noteManager.isAllNotesProcessed();
 
-    if (this.noteManager.isAllNotesProcessed() && isAfterLastNote) {
+    // デバッグログ
+    if (isAfterLastNote && !this.isRunning) {
+      console.log('[checkGameEnd] Already stopped');
+    }
+
+    if (allProcessed && isAfterLastNote) {
+      console.log('[checkGameEnd] Conditions met, isRunning:', this.isRunning);
       if (!this.isRunning) return;
       this.isRunning = false; // 重複呼び出し防止
+      console.log('[checkGameEnd] Starting ending sequence...');
       this.safeSetTimeout(() => {
+        console.log('[checkGameEnd] safeSetTimeout callback fired');
         this.stop();
         this.playEndingAnimation();
       }, ANIMATION_CONFIG.GAME_END_DELAY);
@@ -1184,12 +1193,15 @@ export class GameEngine {
    * 終了アニメーション（店主ズームイン + ありがとうございました）
    */
   private async playEndingAnimation(): Promise<void> {
+    console.log('[playEndingAnimation] Starting, app:', !!this.app, 'gameContainer:', !!this.gameContainer);
     if (!this.app || !this.gameContainer) {
+      console.log('[playEndingAnimation] No app or container, calling onGameEnd directly');
       this.onGameEnd?.();
       return;
     }
 
     this.isEndingAnimation = true;
+    console.log('[playEndingAnimation] isEndingAnimation set to true');
 
     const width = this.app.screen.width;
     const height = this.app.screen.height;
@@ -1247,7 +1259,9 @@ export class GameEngine {
         this.safeRequestAnimationFrame(animate);
       } else {
         // アニメーション完了後、音声が終わるまで待ってからリザルトへ
+        console.log('[playEndingAnimation] Animation complete, waiting 1500ms');
         this.safeSetTimeout(() => {
+          console.log('[playEndingAnimation] Final timeout fired, calling onGameEnd');
           // クリーンアップ
           overlay.destroy();
           if (endingSprite) endingSprite.destroy();
@@ -1422,8 +1436,12 @@ export class GameEngine {
   private safeSetTimeout(callback: () => void, ms: number): number {
     const id = window.setTimeout(() => {
       this.activeTimers.delete(id);
-      if (this.isRunning || this.isEndingAnimation || ms === ANIMATION_CONFIG.GAME_END_DELAY) {
+      const canRun = this.isRunning || this.isEndingAnimation || ms === ANIMATION_CONFIG.GAME_END_DELAY;
+      console.log(`[safeSetTimeout] ms=${ms}, isRunning=${this.isRunning}, isEndingAnimation=${this.isEndingAnimation}, canRun=${canRun}`);
+      if (canRun) {
         callback();
+      } else {
+        console.log('[safeSetTimeout] Callback NOT executed');
       }
     }, ms);
     this.activeTimers.add(id);
