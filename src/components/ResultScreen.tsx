@@ -1,7 +1,9 @@
-import type { ScoreData } from '../types';
+import type { ScoreData, HighScoreData } from '../types';
 
 interface ResultScreenProps {
   scoreData: ScoreData;
+  highScore: HighScoreData | null;
+  isNewRecord: boolean;
   onRetry: () => void;
   onBack: () => void;
 }
@@ -30,7 +32,7 @@ const rankColors: Record<string, string> = {
   '習': 'from-gray-400 to-gray-500',
 };
 
-export function ResultScreen({ scoreData, onRetry, onBack }: ResultScreenProps) {
+export function ResultScreen({ scoreData, highScore, isNewRecord, onRetry, onBack }: ResultScreenProps) {
   const { rank, label } = getRank(scoreData);
 
   return (
@@ -53,8 +55,15 @@ export function ResultScreen({ scoreData, onRetry, onBack }: ResultScreenProps) 
 
       {/* コンテンツ */}
       <div className="relative z-10 flex flex-col items-center w-full max-w-sm sm:max-w-md px-4 sm:px-6">
+        {/* NEW RECORD バッジ */}
+        {isNewRecord && (
+          <div className="absolute -top-2 sm:top-0 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-yellow-500 to-amber-500 rounded-full animate-pulse">
+            <span className="text-xs sm:text-sm font-bold text-[#1a0f0a] tracking-wider">NEW RECORD!</span>
+          </div>
+        )}
+
         {/* タイトル */}
-        <h2 className="text-xs sm:text-sm tracking-[0.3em] sm:tracking-[0.4em] text-[#d4af37] mb-4 sm:mb-6 md:mb-8 uppercase">
+        <h2 className="text-xs sm:text-sm tracking-[0.3em] sm:tracking-[0.4em] text-[#d4af37] mb-4 sm:mb-6 md:mb-8 uppercase mt-6 sm:mt-8">
           Result
         </h2>
 
@@ -70,9 +79,16 @@ export function ResultScreen({ scoreData, onRetry, onBack }: ResultScreenProps) 
         </div>
 
         {/* スコア */}
-        <div className="text-2xl sm:text-3xl md:text-4xl font-extralight text-[#fff8e7] mb-6 sm:mb-8 tracking-wider">
+        <div className="text-2xl sm:text-3xl md:text-4xl font-extralight text-[#fff8e7] mb-2 sm:mb-3 tracking-wider">
           {scoreData.score.toLocaleString()}
         </div>
+
+        {/* ハイスコア */}
+        {highScore && (
+          <div className="text-xs sm:text-sm text-[#d4af37]/70 mb-4 sm:mb-6 tracking-wider">
+            HIGH SCORE: {highScore.score.toLocaleString()}
+          </div>
+        )}
 
         {/* 統計グリッド */}
         <div className="w-full grid grid-cols-2 gap-2 sm:gap-4 mb-6 sm:mb-8">

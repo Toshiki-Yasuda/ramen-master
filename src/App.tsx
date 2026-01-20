@@ -18,7 +18,7 @@ function App() {
   const [beatmap, setBeatmap] = useState<Beatmap | null>(null);
   const [scoreData, setScoreData] = useState<ScoreData | null>(null);
 
-  const { setGameState: setStoreGameState, resetGame } = useGameStore();
+  const { setGameState: setStoreGameState, resetGame, checkAndSaveHighScore, highScore, isNewRecord } = useGameStore();
 
   // 譜面を読み込み
   const loadBeatmap = useCallback(async () => {
@@ -72,10 +72,11 @@ function App() {
   const handleResult = useCallback(
     (getScoreData: () => ScoreData) => {
       setScoreData(getScoreData());
+      checkAndSaveHighScore(); // ハイスコアチェック
       setGameState('result');
       setStoreGameState('result');
     },
-    [setStoreGameState]
+    [setStoreGameState, checkAndSaveHighScore]
   );
 
   // リトライ
@@ -90,7 +91,7 @@ function App() {
   const renderScreen = () => {
     switch (gameState) {
       case 'title':
-        return <TitleScreen onStart={handleStart} />;
+        return <TitleScreen onStart={handleStart} highScore={highScore} />;
 
       case 'loading':
         return <LoadingScreen message="譜面読み込み中..." />;
@@ -114,6 +115,8 @@ function App() {
         return (
           <ResultScreen
             scoreData={scoreData}
+            highScore={highScore}
+            isNewRecord={isNewRecord}
             onRetry={handleRetry}
             onBack={handleBackToTitle}
           />

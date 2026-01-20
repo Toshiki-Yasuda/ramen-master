@@ -1,8 +1,11 @@
+import type { HighScoreData } from '../types';
+
 interface TitleScreenProps {
   onStart: () => void;
+  highScore?: HighScoreData | null;
 }
 
-export function TitleScreen({ onStart }: TitleScreenProps) {
+export function TitleScreen({ onStart, highScore }: TitleScreenProps) {
   return (
     <div className="relative flex flex-col items-center justify-center min-h-screen bg-[#1a0f0a] overflow-hidden px-4">
       {/* 背景グラデーション */}
@@ -39,9 +42,22 @@ export function TitleScreen({ onStart }: TitleScreenProps) {
         </h1>
 
         {/* サブタイトル */}
-        <p className="text-[#d4af37] mb-8 sm:mb-12 md:mb-16 text-xs sm:text-sm tracking-[0.2em] sm:tracking-[0.3em] uppercase text-center">
+        <p className="text-[#d4af37] mb-4 sm:mb-6 text-xs sm:text-sm tracking-[0.2em] sm:tracking-[0.3em] uppercase text-center">
           Rhythm of Ramen Master
         </p>
+
+        {/* ハイスコア */}
+        {highScore && (
+          <div className="mb-6 sm:mb-10 md:mb-12 text-center">
+            <p className="text-[10px] sm:text-xs text-[#d4af37]/60 tracking-[0.15em] mb-1">HIGH SCORE</p>
+            <p className="text-xl sm:text-2xl md:text-3xl font-light text-[#fff8e7] tracking-wider">
+              {highScore.score.toLocaleString()}
+            </p>
+          </div>
+        )}
+
+        {/* ハイスコアがない場合のスペーサー */}
+        {!highScore && <div className="mb-4 sm:mb-6 md:mb-8" />}
 
         {/* スタートボタン */}
         <button

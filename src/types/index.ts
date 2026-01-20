@@ -60,6 +60,13 @@ export interface ScoreData {
   judgments: JudgmentCounts;
 }
 
+// ハイスコアデータ
+export interface HighScoreData {
+  score: number;
+  maxCombo: number;
+  date: string; // ISO形式
+}
+
 // ゲームストア状態
 export interface GameStoreState {
   gameState: GameState;
@@ -68,10 +75,14 @@ export interface GameStoreState {
   maxCombo: number;
   judgments: JudgmentCounts;
   lastJudgment: JudgmentType | null;
+  highScore: HighScoreData | null;
+  isNewRecord: boolean;
 
   // アクション
   setGameState: (state: GameState) => void;
   addScore: (judgment: JudgmentType) => void;
   resetGame: () => void;
   getScoreData: () => ScoreData;
+  checkAndSaveHighScore: () => boolean; // 新記録かどうかを返す
+  loadHighScore: () => void;
 }
