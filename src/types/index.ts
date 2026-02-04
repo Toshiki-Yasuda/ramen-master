@@ -6,9 +6,9 @@ export type JudgmentType = 'PERFECT' | 'GREAT' | 'GOOD' | 'MISS';
 
 // 判定ウィンドウ（ms）
 export const JUDGMENT_WINDOWS = {
-  PERFECT: 30,
-  GREAT: 60,
-  GOOD: 100,
+  PERFECT: 50,
+  GREAT: 100,
+  GOOD: 150,
 } as const;
 
 // スコア設定
@@ -18,6 +18,13 @@ export const SCORE_VALUES: Record<JudgmentType, number> = {
   GOOD: 500,
   MISS: 0,
 };
+
+// コンボボーナス設定
+export const COMBO_BONUS = {
+  INTERVAL: 10,      // 倍率が上がるコンボ間隔
+  INCREMENT: 0.1,    // 倍率増分
+  MAX_MULTIPLIER: 2.0, // 最大倍率
+} as const;
 
 // ノート（譜面上の1打）
 export interface Note {
@@ -73,6 +80,7 @@ export interface GameStoreState {
   score: number;
   combo: number;
   maxCombo: number;
+  comboMultiplier: number;
   judgments: JudgmentCounts;
   lastJudgment: JudgmentType | null;
   highScore: HighScoreData | null;
@@ -83,6 +91,6 @@ export interface GameStoreState {
   addScore: (judgment: JudgmentType) => void;
   resetGame: () => void;
   getScoreData: () => ScoreData;
-  checkAndSaveHighScore: () => boolean; // 新記録かどうかを返す
+  checkAndSaveHighScore: () => boolean;
   loadHighScore: () => void;
 }

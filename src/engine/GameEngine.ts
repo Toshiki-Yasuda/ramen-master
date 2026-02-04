@@ -174,6 +174,7 @@ export class GameEngine {
 
   // 店主スプライト
   private chefSprites: Map<string, Sprite> = new Map();
+  private chefBaseScales: Map<string, { x: number; y: number }> = new Map();
   private currentChefState: string = 'taste';
 
   // UI要素
@@ -208,8 +209,19 @@ export class GameEngine {
   // ゲーム状態
   private isRunning: boolean = false;
   private isEndingAnimation: boolean = false;
+  private isDisposed: boolean = false;
   private beatmap: Beatmap | null = null;
   private noteGraphics: Map<number, Container> = new Map();
+
+  // カオスイベント
+  private chaosContainer: Container | null = null;
+  private lastChaosScore: number = 0;
+  private lastJudgmentForChaos: JudgmentType | null = null;
+
+
+  // ラーメン進化
+  private ramenLevel: number = 0;
+  private ramenToppings: Graphics[] = [];
 
   // コールバック
   private onScoreUpdate: ((judgment: JudgmentType) => void) | null = null;
@@ -224,6 +236,7 @@ export class GameEngine {
    * ゲームエンジンを初期化
    */
   async init(canvas: HTMLCanvasElement): Promise<void> {
+    this.isDisposed = false;
     this.app = new Application();
     await this.app.init({
       canvas,
@@ -237,7 +250,6 @@ export class GameEngine {
 
     // 画面サイズに応じてスケール設定を計算
     this.config = getScaledConfig(this.app.screen.width, this.app.screen.height);
-    console.log(`画面サイズ: ${this.app.screen.width}x${this.app.screen.height}, スケール: ${this.config.SCALE.toFixed(2)}`);
 
     await this.audioEngine.init();
     this.setupContainers();
@@ -275,6 +287,9 @@ export class GameEngine {
 
     this.effectsContainer = new Container();
     this.gameContainer.addChild(this.effectsContainer);
+
+    this.chaosContainer = new Container();
+    this.gameContainer.addChild(this.chaosContainer);
 
     this.uiContainer = new Container();
     this.gameContainer.addChild(this.uiContainer);
@@ -388,6 +403,7 @@ export class GameEngine {
         sprite.alpha = 0.9;
 
         this.chefSprites.set(key, sprite);
+        this.chefBaseScales.set(key, { x: sprite.scale.x, y: sprite.scale.y });
         this.chefContainer.addChild(sprite);
       } catch (e) {
         console.warn(`店主画像の読み込みに失敗: ${key}`, e);
@@ -395,6 +411,83 @@ export class GameEngine {
     }
 
     this.currentChefState = 'taste';
+
+    // 画像が1枚もロードできなかった場合はフォールバック描画
+    if (this.chefSprites.size === 0) {
+      this.setupFallbackChef();
+    }
+  }
+
+  /**
+   * 店主フォールバック描画（画像がない場合の簡易キャラ）
+   */
+  private setupFallbackChef(): void {
+    if (!this.app || !this.chefContainer) return;
+
+    const height = this.app.screen.height;
+    const width = this.app.screen.width;
+    const scale = this.config.SCALE;
+
+    const states = ['taste', 'yukiri', 'happy', 'perfect', 'serve', 'thanks'];
+    const expressions: Record<string, { mouth: string; eyes: string }> = {
+      taste: { mouth: '〜', eyes: '− −' },
+      yukiri: { mouth: '！', eyes: '＞＜' },
+      happy: { mouth: '▽', eyes: '＾＾' },
+      perfect: { mouth: '◎', eyes: '★★' },
+      serve: { mouth: '∀', eyes: '＾＾' },
+      thanks: { mouth: '▽', eyes: '＾＾' },
+    };
+
+    for (const state of states) {
+      const container = new Container();
+      const expr = expressions[state];
+
+      // 体（丸）
+      const body = new Graphics();
+      body.circle(0, 0, 60 * scale).fill({ color: 0xFFE4B5, alpha: 0.9 });
+      body.circle(0, 0, 60 * scale).stroke({ color: COLORS.GOLD, width: 2 });
+      container.addChild(body);
+
+      // 帽子
+      const hat = new Graphics();
+      hat.rect(-40 * scale, -85 * scale, 80 * scale, 30 * scale)
+        .fill({ color: 0xFFFFF0, alpha: 0.95 });
+      hat.rect(-50 * scale, -55 * scale, 100 * scale, 8 * scale)
+        .fill({ color: 0xFFFFF0, alpha: 0.95 });
+      container.addChild(hat);
+
+      // 目
+      const eyeStyle = new TextStyle({
+        fontFamily: 'monospace',
+        fontSize: 18 * scale,
+        fill: 0x333333,
+      });
+      const eyes = new Text({ text: expr.eyes, style: eyeStyle });
+      eyes.anchor.set(0.5);
+      eyes.y = -15 * scale;
+      container.addChild(eyes);
+
+      // 口
+      const mouthStyle = new TextStyle({
+        fontFamily: 'monospace',
+        fontSize: 22 * scale,
+        fill: 0xCC6666,
+      });
+      const mouth = new Text({ text: expr.mouth, style: mouthStyle });
+      mouth.anchor.set(0.5);
+      mouth.y = 15 * scale;
+      container.addChild(mouth);
+
+      // PixiJSのSpriteではないがSpriteとして扱うため、位置を設定
+      container.x = width - 100 * scale;
+      container.y = height - 120 * scale;
+      container.visible = state === 'taste';
+
+      this.chefContainer.addChild(container);
+      // ContainerをSpriteとして扱う（型キャスト）
+      this.chefSprites.set(state, container as unknown as Sprite);
+      this.chefBaseScales.set(state, { x: container.scale.x, y: container.scale.y });
+    }
   }
 
   /**
@@ -412,15 +505,15 @@ export class GameEngine {
     const sprite = this.chefSprites.get(state);
     if (sprite) {
       sprite.visible = true;
-      sprite.scale.set(sprite.scale.x * 1.05); // ポップ効果
+      const baseScale = this.chefBaseScales.get(state) ?? { x: 1, y: 1 };
+      // ポップ効果
+      sprite.scale.set(baseScale.x * 1.05, baseScale.y * 1.05);
       this.currentChefState = state;
 
       // スケールを元に戻す
       this.safeSetTimeout(() => {
-        if (sprite && this.app) {
-          const targetHeight = this.app.screen.height * 0.7;
-          const originalScale = targetHeight / (sprite.texture.height);
-          sprite.scale.set(originalScale);
+        if (sprite) {
+          sprite.scale.set(baseScale.x, baseScale.y);
         }
       }, 100);
     }
@@ -792,6 +885,7 @@ export class GameEngine {
       }
     }
 
+    this.audioEngine.setBPM(beatmap.meta.bpm);
     const bgmUrl = `/ramen-master${beatmap.audio.bgm}`;
     await this.audioEngine.loadBGM(bgmUrl);
   }
@@ -810,6 +904,11 @@ export class GameEngine {
     this.glowPhase = 0;
     this.hitFlashAlpha = 0;
     this.screenShake = { x: 0, y: 0 };
+    this.lastChaosScore = 0;
+    this.lastJudgmentForChaos = null;
+    this.ramenLevel = 0;
+    this.ramenToppings.forEach(g => g.destroy());
+    this.ramenToppings = [];
 
     if (this.notesContainer) {
       this.notesContainer.removeChildren();
@@ -1155,6 +1254,7 @@ export class GameEngine {
     missedNotes.forEach(() => {
       this.showJudgment('MISS');
       this.onScoreUpdate?.('MISS');
+      this.audioEngine.playSynthJudgmentSE('MISS');
       // 画面シェイク
       this.screenShake.x = (Math.random() - 0.5) * 8;
       this.screenShake.y = (Math.random() - 0.5) * 8;
@@ -1171,21 +1271,13 @@ export class GameEngine {
     const isAfterLastNote = currentTime > lastNoteTime + 2;
     const allProcessed = this.noteManager.isAllNotesProcessed();
 
-    // デバッグログ
-    if (isAfterLastNote && !this.isRunning) {
-      console.log('[checkGameEnd] Already stopped');
-    }
-
     if (allProcessed && isAfterLastNote) {
-      console.log('[checkGameEnd] Conditions met, isRunning:', this.isRunning);
       if (!this.isRunning) return;
-      this.isRunning = false; // 重複呼び出し防止
-      console.log('[checkGameEnd] Starting ending sequence...');
+      this.isRunning = false;
       this.safeSetTimeout(() => {
-        console.log('[checkGameEnd] safeSetTimeout callback fired');
         this.stop();
         this.playEndingAnimation();
-      }, ANIMATION_CONFIG.GAME_END_DELAY);
+      }, ANIMATION_CONFIG.GAME_END_DELAY, true);
     }
   }
 
@@ -1193,15 +1285,12 @@ export class GameEngine {
    * 終了アニメーション（店主ズームイン + ありがとうございました）
    */
   private async playEndingAnimation(): Promise<void> {
-    console.log('[playEndingAnimation] Starting, app:', !!this.app, 'gameContainer:', !!this.gameContainer);
     if (!this.app || !this.gameContainer) {
-      console.log('[playEndingAnimation] No app or container, calling onGameEnd directly');
       this.onGameEnd?.();
       return;
     }
 
     this.isEndingAnimation = true;
-    console.log('[playEndingAnimation] isEndingAnimation set to true');
 
     const width = this.app.screen.width;
     const height = this.app.screen.height;
@@ -1213,17 +1302,36 @@ export class GameEngine {
 
     // 店主画像（thanks: ありがとうございました）を中央に配置
     const thanksSprite = this.chefSprites.get('thanks');
-    let endingSprite: Sprite | null = null;
+    let endingSprite: Sprite | Container | null = null;
 
-    if (thanksSprite) {
-      // 新しいスプライトを作成（元のは非表示に）
+    if (thanksSprite && thanksSprite.texture && thanksSprite.texture.width > 0) {
+      // 実画像がある場合：新しいスプライトを作成
       endingSprite = new Sprite(thanksSprite.texture);
-      endingSprite.anchor.set(0.5);
+      (endingSprite as Sprite).anchor.set(0.5);
       endingSprite.x = width / 2;
       endingSprite.y = height / 2;
       endingSprite.scale.set(0.3);
       endingSprite.alpha = 0;
       this.app.stage.addChild(endingSprite);
+    } else if (thanksSprite) {
+      // フォールバックchef（Container）の場合：テキストで代替
+      const endingText = new Text({
+        text: 'ありがとうございました！',
+        style: new TextStyle({
+          fontFamily: '"Hiragino Mincho ProN", "Yu Mincho", serif',
+          fontSize: Math.max(28, 48 * this.config.SCALE),
+          fontWeight: 'bold',
+          fill: COLORS.GOLD_LIGHT,
+          stroke: { color: 0x000000, width: 3 },
+        }),
+      });
+      endingText.anchor.set(0.5);
+      endingText.x = width / 2;
+      endingText.y = height / 2;
+      endingText.alpha = 0;
+      endingText.scale.set(0.3);
+      this.app.stage.addChild(endingText);
+      endingSprite = endingText as unknown as Container;
     }
 
     // アニメーション
@@ -1240,10 +1348,13 @@ export class GameEngine {
       overlay.clear();
       overlay.rect(0, 0, width, height).fill({ color: 0x1a0f0a, alpha: easeOut * 0.85 });
 
-      // 店主画像をズームイン＆フェードイン
+      // 店主画像/テキストをズームイン＆フェードイン
       if (endingSprite) {
         endingSprite.alpha = easeOut;
-        const targetScale = Math.min(height * 0.85 / endingSprite.texture.height, 1.0);
+        const texHeight = (endingSprite as Sprite).texture?.height;
+        const targetScale = texHeight && texHeight > 0
+          ? Math.min(height * 0.85 / texHeight, 1.0)
+          : 1.0;
         endingSprite.scale.set(0.3 + (targetScale - 0.3) * easeOut);
         // 少し上下に揺れる
         endingSprite.y = height / 2 + Math.sin(frame * 0.1) * 3;
@@ -1258,20 +1369,308 @@ export class GameEngine {
       if (frame < totalFrames) {
         this.safeRequestAnimationFrame(animate);
       } else {
-        // アニメーション完了後、音声が終わるまで待ってからリザルトへ
-        console.log('[playEndingAnimation] Animation complete, waiting 1500ms');
         this.safeSetTimeout(() => {
-          console.log('[playEndingAnimation] Final timeout fired, calling onGameEnd');
           // クリーンアップ
           overlay.destroy();
           if (endingSprite) endingSprite.destroy();
           this.isEndingAnimation = false;
           this.onGameEnd?.();
-        }, 1500); // 音声再生時間を考慮
+        }, 1500, true); // 音声再生時間を考慮
       }
     };
 
     animate();
+  }
+
+  /**
+   * カオスイベントを判定・発動
+   */
+  private triggerChaosEvent(score: number, judgment: JudgmentType): void {
+    if (!this.app || !this.chaosContainer || judgment === 'MISS') return;
+
+    // スコア閾値チェック（発動確率はスコアに応じて上昇）
+    let chance = 0;
+    let eventPool: string[] = [];
+
+    if (score >= 10000) {
+      chance = 0.5;
+      eventPool = ['rainbow', 'uchu', 'ojisan', 'neko', 'wink'];
+    } else if (score >= 8000) {
+      chance = 0.4;
+      eventPool = ['uchu', 'ojisan', 'neko', 'wink'];
+    } else if (score >= 5000) {
+      chance = 0.3;
+      eventPool = ['ojisan', 'neko', 'wink'];
+    } else if (score >= 3000) {
+      chance = 0.2;
+      eventPool = ['neko', 'wink'];
+    } else if (score >= 1000) {
+      chance = 0.1;
+      eventPool = ['wink'];
+    }
+
+    if (eventPool.length === 0 || Math.random() > chance) return;
+    // 連続発動抑制
+    if (score - this.lastChaosScore < 500) return;
+    this.lastChaosScore = score;
+
+    const event = eventPool[Math.floor(Math.random() * eventPool.length)];
+    this.playChaosEffect(event);
+  }
+
+  private playChaosEffect(eventType: string): void {
+    if (!this.app || !this.chaosContainer) return;
+
+    const width = this.app.screen.width;
+    const height = this.app.screen.height;
+    const fontSize = Math.max(24, 48 * this.config.SCALE);
+
+    const messages: Record<string, string> = {
+      wink: '( ＾ω＾ )✧',
+      neko: '🐱 竜巻旋風脚！！',
+      ojisan: '謎のおじさん乱入！？',
+      uchu: '🚀 宇宙服着用！！',
+      rainbow: '✨ 伝説の丼降臨 ✨',
+    };
+
+    const colors: Record<string, number> = {
+      wink: COLORS.GOLD_LIGHT,
+      neko: COLORS.VERMILION_LIGHT,
+      ojisan: COLORS.CREAM,
+      uchu: 0x87CEEB,
+      rainbow: COLORS.SPARKLE,
+    };
+
+    const message = messages[eventType] || eventType;
+    const color = colors[eventType] || COLORS.CREAM;
+
+    // テキスト演出
+    const style = new TextStyle({
+      fontFamily: '"Hiragino Mincho ProN", "Yu Mincho", serif',
+      fontSize: fontSize,
+      fontWeight: 'bold',
+      fill: color,
+      stroke: { color: 0x000000, width: 4 },
+      dropShadow: { color: color, blur: 20, distance: 0, alpha: 0.8 },
+    });
+
+    const chaosText = new Text({ text: message, style });
+    chaosText.anchor.set(0.5);
+    chaosText.x = width / 2;
+    chaosText.y = height * 0.3;
+    chaosText.alpha = 0;
+    chaosText.scale.set(0.5);
+    this.chaosContainer.addChild(chaosText);
+
+    // アニメーション
+    let frame = 0;
+    const totalFrames = 90;
+    const animate = () => {
+      frame++;
+      const progress = frame / totalFrames;
+
+      if (progress < 0.2) {
+        // ズームイン
+        const t = progress / 0.2;
+        chaosText.alpha = t;
+        chaosText.scale.set(0.5 + t * 0.8);
+        chaosText.rotation = Math.sin(t * Math.PI * 4) * 0.05;
+      } else if (progress < 0.7) {
+        // 表示中（少し揺れる）
+        chaosText.alpha = 1;
+        chaosText.scale.set(1.3);
+        chaosText.y = height * 0.3 + Math.sin(frame * 0.1) * 5;
+      } else {
+        // フェードアウト
+        const t = (progress - 0.7) / 0.3;
+        chaosText.alpha = 1 - t;
+        chaosText.scale.set(1.3 + t * 0.3);
+        chaosText.y = height * 0.3 - t * 30;
+      }
+
+      if (frame < totalFrames) {
+        this.safeRequestAnimationFrame(animate);
+      } else {
+        chaosText.destroy();
+      }
+    };
+    this.safeRequestAnimationFrame(animate);
+
+    // 特殊演出
+    if (eventType === 'rainbow') {
+      this.playRainbowEffect();
+    } else if (eventType === 'neko') {
+      this.playScreenSpin();
+    }
+  }
+
+  private playRainbowEffect(): void {
+    if (!this.app || !this.effectsContainer) return;
+    const width = this.app.screen.width;
+    const height = this.app.screen.height;
+
+    const overlay = new Graphics();
+    this.effectsContainer.addChild(overlay);
+
+    let frame = 0;
+    const totalFrames = 60;
+    const animate = () => {
+      frame++;
+      const progress = frame / totalFrames;
+      const hue = (frame * 6) % 360;
+      const r = Math.sin(hue * Math.PI / 180) * 127 + 128;
+      const g = Math.sin((hue + 120) * Math.PI / 180) * 127 + 128;
+      const b = Math.sin((hue + 240) * Math.PI / 180) * 127 + 128;
+      const color = (Math.round(r) << 16) | (Math.round(g) << 8) | Math.round(b);
+      const alpha = progress < 0.3 ? progress / 0.3 * 0.15 : progress > 0.7 ? (1 - progress) / 0.3 * 0.15 : 0.15;
+
+      overlay.clear();
+      overlay.rect(0, 0, width, height).fill({ color, alpha });
+
+      if (frame < totalFrames) {
+        this.safeRequestAnimationFrame(animate);
+      } else {
+        overlay.destroy();
+      }
+    };
+    this.safeRequestAnimationFrame(animate);
+  }
+
+  /**
+   * ラーメン進化（コンボに応じて具材追加）
+   */
+  private updateRamenEvolution(combo: number): void {
+    let targetLevel = 0;
+    if (combo >= 50) targetLevel = 4;
+    else if (combo >= 30) targetLevel = 3;
+    else if (combo >= 20) targetLevel = 2;
+    else if (combo >= 10) targetLevel = 1;
+
+    if (targetLevel === this.ramenLevel) return;
+
+    // レベルダウン時はトッピングをクリア
+    if (targetLevel < this.ramenLevel) {
+      this.ramenToppings.forEach(g => g.destroy());
+      this.ramenToppings = [];
+      this.ramenLevel = 0;
+    }
+
+    // 足りないレベル分を追加
+    while (this.ramenLevel < targetLevel) {
+      this.ramenLevel++;
+      this.addRamenTopping(this.ramenLevel);
+    }
+  }
+
+  private addRamenTopping(level: number): void {
+    if (!this.app || !this.bowlContainer) return;
+
+    const bowlCenterX = this.config.JUDGE_LINE_X;
+    const bowlY = this.app.screen.height - 80;
+    const g = new Graphics();
+
+    switch (level) {
+      case 1: {
+        // 麺（曲線で表現）
+        for (let i = 0; i < 6; i++) {
+          const offsetX = (i - 3) * 8;
+          g.moveTo(bowlCenterX + offsetX - 20, bowlY - 30)
+            .quadraticCurveTo(bowlCenterX + offsetX, bowlY - 15, bowlCenterX + offsetX + 15, bowlY - 35)
+            .stroke({ color: 0xFFF3C4, width: 2.5, alpha: 0.9 });
+        }
+        break;
+      }
+      case 2: {
+        // チャーシュー（楕円＋模様）
+        const cx = bowlCenterX + 15;
+        const cy = bowlY - 32;
+        g.ellipse(cx, cy, 14, 10).fill({ color: 0xCD853F, alpha: 0.9 });
+        g.ellipse(cx, cy, 14, 10).stroke({ color: 0x8B4513, width: 1.5 });
+        // 脂身のライン
+        g.moveTo(cx - 8, cy - 2).lineTo(cx + 8, cy - 2)
+          .stroke({ color: 0xFFE4B5, width: 2, alpha: 0.6 });
+        break;
+      }
+      case 3: {
+        // 煮卵（半分に切った卵）
+        const ex = bowlCenterX - 18;
+        const ey = bowlY - 33;
+        // 白身
+        g.ellipse(ex, ey, 10, 8).fill({ color: 0xFFFFF0, alpha: 0.95 });
+        g.ellipse(ex, ey, 10, 8).stroke({ color: 0xDDD8C4, width: 1 });
+        // 黄身
+        g.circle(ex, ey, 5).fill({ color: 0xFFA500, alpha: 0.9 });
+        g.circle(ex - 1, ey - 1, 2).fill({ color: 0xFFD700, alpha: 0.5 });
+        break;
+      }
+      case 4: {
+        // 全部のせ輝きエフェクト
+        for (let i = 0; i < 8; i++) {
+          const angle = (Math.PI * 2 * i) / 8;
+          const r = 35;
+          const sx = bowlCenterX + Math.cos(angle) * r;
+          const sy = (bowlY - 25) + Math.sin(angle) * r * 0.5;
+          g.circle(sx, sy, 2).fill({ color: COLORS.SPARKLE, alpha: 0.7 });
+        }
+        // 海苔（長方形）
+        g.roundRect(bowlCenterX + 25, bowlY - 45, 6, 18, 1)
+          .fill({ color: 0x1A3300, alpha: 0.85 });
+        // ネギ
+        for (let i = 0; i < 5; i++) {
+          const nx = bowlCenterX - 5 + i * 5;
+          g.circle(nx, bowlY - 28, 2).fill({ color: 0x228B22, alpha: 0.8 });
+        }
+        break;
+      }
+    }
+
+    this.bowlContainer.addChild(g);
+    this.ramenToppings.push(g);
+
+    // 追加時の輝きエフェクト
+    if (this.effectsContainer && this.app) {
+      const sparkle = new Graphics();
+      sparkle.circle(bowlCenterX, bowlY - 30, 40)
+        .fill({ color: COLORS.GOLD_LIGHT, alpha: 0.3 });
+      this.effectsContainer.addChild(sparkle);
+
+      let frame = 0;
+      const animate = () => {
+        frame++;
+        sparkle.alpha = 0.3 * (1 - frame / 20);
+        sparkle.scale.set(1 + frame * 0.05);
+        if (frame < 20) {
+          this.safeRequestAnimationFrame(animate);
+        } else {
+          sparkle.destroy();
+        }
+      };
+      this.safeRequestAnimationFrame(animate);
+    }
+  }
+
+  private playScreenSpin(): void {
+    if (!this.gameContainer) return;
+
+    let frame = 0;
+    const totalFrames = 30;
+    const animate = () => {
+      frame++;
+      const progress = frame / totalFrames;
+      const angle = Math.sin(progress * Math.PI) * 0.05;
+      if (this.gameContainer) {
+        this.gameContainer.rotation = angle;
+      }
+
+      if (frame < totalFrames) {
+        this.safeRequestAnimationFrame(animate);
+      } else {
+        if (this.gameContainer) {
+          this.gameContainer.rotation = 0;
+        }
+      }
+    };
+    this.safeRequestAnimationFrame(animate);
   }
 
   /**
@@ -1286,6 +1685,8 @@ export class GameEngine {
     if (judgment) {
       this.showJudgment(judgment);
       this.onScoreUpdate?.(judgment);
+      this.audioEngine.playSynthJudgmentSE(judgment);
+      this.lastJudgmentForChaos = judgment;
 
       if (judgment !== 'MISS') {
         // レーンのY座標でパーティクル発生
@@ -1350,19 +1751,29 @@ export class GameEngine {
   /**
    * スコア更新
    */
-  updateScore(score: number, combo: number): void {
+  updateScore(score: number, combo: number, multiplier: number = 1.0): void {
     if (this.scoreText) {
       this.scoreText.text = score.toLocaleString();
     }
     if (this.comboText && this.comboLabel) {
       if (combo > 0) {
-        this.comboText.text = `${combo}`;
+        const multiplierStr = multiplier > 1.0 ? ` x${multiplier.toFixed(1)}` : '';
+        this.comboText.text = `${combo}${multiplierStr}`;
         this.comboText.scale.set(1 + Math.min(combo, 100) * 0.003);
         this.comboLabel.alpha = 0.7;
       } else {
         this.comboText.text = '';
         this.comboLabel.alpha = 0;
       }
+    }
+
+    // ラーメン進化チェック
+    this.updateRamenEvolution(combo);
+
+    // カオスイベント判定（スコアが確定した状態で実行）
+    if (this.lastJudgmentForChaos) {
+      this.triggerChaosEvent(score, this.lastJudgmentForChaos);
+      this.lastJudgmentForChaos = null;
     }
   }
 
@@ -1381,6 +1792,7 @@ export class GameEngine {
    * リソース解放
    */
   dispose(): void {
+    this.isDisposed = true;
     this.stop();
     this.clearAllTimersAndFrames();
     this.audioEngine.dispose();
@@ -1392,6 +1804,13 @@ export class GameEngine {
     this.hitParticles = [];
     this.ambientParticles = [];
 
+    // トッピングをコンテナnull化前に破棄
+    this.ramenToppings.forEach(g => {
+      try { g.destroy(); } catch { /* already destroyed by parent */ }
+    });
+    this.ramenToppings = [];
+    this.ramenLevel = 0;
+
     const app = this.app;
     this.app = null;
     this.gameContainer = null;
@@ -1400,7 +1819,11 @@ export class GameEngine {
     this.bowlContainer = null;
     this.notesContainer = null;
     this.effectsContainer = null;
+    this.chaosContainer = null;
     this.uiContainer = null;
+    this.chefContainer = null;
+    this.chefSprites.clear();
+    this.chefBaseScales.clear();
     this.chopsticks = null;
     this.chopsticksGlow = null;
     this.judgmentText = null;
@@ -1433,15 +1856,12 @@ export class GameEngine {
   /**
    * 安全なsetTimeout（dispose時に自動クリア）
    */
-  private safeSetTimeout(callback: () => void, ms: number): number {
+  private safeSetTimeout(callback: () => void, ms: number, force: boolean = false): number {
     const id = window.setTimeout(() => {
       this.activeTimers.delete(id);
-      const canRun = this.isRunning || this.isEndingAnimation || ms === ANIMATION_CONFIG.GAME_END_DELAY;
-      console.log(`[safeSetTimeout] ms=${ms}, isRunning=${this.isRunning}, isEndingAnimation=${this.isEndingAnimation}, canRun=${canRun}`);
-      if (canRun) {
+      if (this.isDisposed) return;
+      if (force || this.isRunning || this.isEndingAnimation) {
         callback();
-      } else {
-        console.log('[safeSetTimeout] Callback NOT executed');
       }
     }, ms);
     this.activeTimers.add(id);
@@ -1454,7 +1874,9 @@ export class GameEngine {
   private safeRequestAnimationFrame(callback: () => void): number {
     const id = window.requestAnimationFrame(() => {
       this.activeAnimationFrames.delete(id);
-      callback();
+      if (!this.isDisposed) {
+        callback();
+      }
     });
     this.activeAnimationFrames.add(id);
     return id;

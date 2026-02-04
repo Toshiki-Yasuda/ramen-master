@@ -15,10 +15,14 @@ export function GameContainer({ beatmap, onBack, onResult }: GameContainerProps)
   const containerRef = useRef<HTMLDivElement>(null);
   const isInitializedRef = useRef(false);
 
-  const { score, combo, addScore, resetGame } = useGameStore();
+  const { score, combo, comboMultiplier, addScore, resetGame, getScoreData } = useGameStore();
 
-  // 入力ハンドラ
+  // 入力ハンドラ（タッチとクリックの二重発火を防止）
+  const lastInputTimeRef = useRef(0);
   const handleInput = useCallback(() => {
+    const now = performance.now();
+    if (now - lastInputTimeRef.current < 30) return; // 30ms以内の連続入力を無視
+    lastInputTimeRef.current = now;
     engineRef.current?.handleInput();
   }, []);
 
@@ -77,8 +81,8 @@ export function GameContainer({ beatmap, onBack, onResult }: GameContainerProps)
             addScore(judgment);
           },
           () => {
-            // ゲーム終了時
-            onResult(() => engine.getScoreData());
+            // ゲーム終了時 - gameStoreのスコア（コンボボーナス込み）を使用
+            onResult(() => getScoreData());
           }
         );
 
@@ -104,12 +108,12 @@ export function GameContainer({ beatmap, onBack, onResult }: GameContainerProps)
       }
       isInitializedRef.current = false;
     };
-  }, [beatmap, addScore, resetGame, onResult]);
+  }, [beatmap, addScore, resetGame, onResult, getScoreData]);
 
   // スコア/コンボ更新をエンジンに反映
   useEffect(() => {
-    engineRef.current?.updateScore(score, combo);
-  }, [score, combo]);
+    engineRef.current?.updateScore(score, combo, comboMultiplier);
+  }, [score, combo, comboMultiplier]);
 
   // リサイズ対応
   useEffect(() => {

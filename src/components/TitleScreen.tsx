@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { HighScoreData } from '../types';
 
 interface TitleScreenProps {
@@ -5,7 +6,21 @@ interface TitleScreenProps {
   highScore?: HighScoreData | null;
 }
 
+function FallbackTitleImage() {
+  return (
+    <div className="w-48 sm:w-72 md:w-96 h-auto flex flex-col items-center justify-center py-4 sm:py-6">
+      <div className="text-5xl sm:text-7xl md:text-8xl mb-2"
+           style={{ textShadow: '0 0 30px rgba(212,175,55,0.5)' }}>
+        🍜
+      </div>
+      <div className="w-24 sm:w-36 md:w-48 h-px bg-gradient-to-r from-transparent via-[#d4af37] to-transparent mb-2" />
+    </div>
+  );
+}
+
 export function TitleScreen({ onStart, highScore }: TitleScreenProps) {
+  const [imgFailed, setImgFailed] = useState(false);
+
   return (
     <div className="relative flex flex-col items-center justify-center min-h-screen bg-[#1a0f0a] overflow-hidden px-4">
       {/* 背景グラデーション */}
@@ -23,16 +38,18 @@ export function TitleScreen({ onStart, highScore }: TitleScreenProps) {
 
       {/* コンテンツ */}
       <div className="relative z-10 flex flex-col items-center w-full max-w-md">
-        {/* タイトル画像 */}
+        {/* タイトル画像 or フォールバック */}
         <div className="mb-4 sm:mb-6">
-          <img
-            src="/ramen-master/images/title.png"
-            alt="湯切りますたー"
-            className="w-48 sm:w-72 md:w-96 h-auto drop-shadow-2xl"
-            onError={(e) => {
-              e.currentTarget.style.display = 'none';
-            }}
-          />
+          {imgFailed ? (
+            <FallbackTitleImage />
+          ) : (
+            <img
+              src="/ramen-master/images/title.png"
+              alt="湯切りますたー"
+              className="w-48 sm:w-72 md:w-96 h-auto drop-shadow-2xl"
+              onError={() => setImgFailed(true)}
+            />
+          )}
         </div>
 
         {/* タイトルテキスト */}
@@ -64,11 +81,8 @@ export function TitleScreen({ onStart, highScore }: TitleScreenProps) {
           onClick={onStart}
           className="group relative px-8 sm:px-12 md:px-16 py-3 sm:py-4 overflow-hidden active:scale-95 transition-transform"
         >
-          {/* ボタン背景 */}
           <div className="absolute inset-0 bg-gradient-to-r from-[#d4af37] to-[#b8972e] rounded-sm" />
           <div className="absolute inset-[2px] bg-[#1a0f0a] rounded-sm group-hover:bg-[#2d1f15] transition-colors" />
-
-          {/* ボタンテキスト */}
           <span className="relative text-base sm:text-lg md:text-xl font-medium text-[#d4af37] tracking-[0.15em] sm:tracking-[0.2em]"
                 style={{ fontFamily: '"Hiragino Mincho ProN", "Yu Mincho", serif' }}>
             はじめる

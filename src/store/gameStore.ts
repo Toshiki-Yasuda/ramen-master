@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { GameStoreState, JudgmentType, HighScoreData } from '../types';
-import { SCORE_VALUES } from '../types';
+import { SCORE_VALUES, COMBO_BONUS } from '../types';
 
 const HIGHSCORE_KEY = 'yukiri-master-highscore';
 
@@ -38,6 +38,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
   score: 0,
   combo: 0,
   maxCombo: 0,
+  comboMultiplier: 1.0,
   judgments: { ...initialJudgments },
   lastJudgment: null,
   highScore: loadHighScoreFromStorage(),
@@ -46,18 +47,26 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
   setGameState: (state) => set({ gameState: state }),
 
   addScore: (judgment: JudgmentType) => {
-    const scoreToAdd = SCORE_VALUES[judgment];
+    const baseScore = SCORE_VALUES[judgment];
     const isMiss = judgment === 'MISS';
 
     set((state) => {
       const newCombo = isMiss ? 0 : state.combo + 1;
       const newMaxCombo = Math.max(state.maxCombo, newCombo);
+      const newMultiplier = isMiss
+        ? 1.0
+        : Math.min(
+            COMBO_BONUS.MAX_MULTIPLIER,
+            1.0 + Math.floor(newCombo / COMBO_BONUS.INTERVAL) * COMBO_BONUS.INCREMENT
+          );
+      const scoreToAdd = Math.round(baseScore * newMultiplier);
       const judgmentKey = judgment.toLowerCase() as keyof typeof initialJudgments;
 
       return {
         score: state.score + scoreToAdd,
         combo: newCombo,
         maxCombo: newMaxCombo,
+        comboMultiplier: newMultiplier,
         judgments: {
           ...state.judgments,
           [judgmentKey]: state.judgments[judgmentKey] + 1,
@@ -72,6 +81,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       score: 0,
       combo: 0,
       maxCombo: 0,
+      comboMultiplier: 1.0,
       judgments: { ...initialJudgments },
       lastJudgment: null,
       isNewRecord: false,
