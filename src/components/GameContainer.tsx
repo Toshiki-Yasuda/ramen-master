@@ -89,8 +89,8 @@ export function GameContainer({ beatmap, onBack, onResult }: GameContainerProps)
         // ゲームリセット
         resetGame();
 
-        // ゲーム開始
-        engine.start();
+        // ゲーム開始（カウントダウン付き）
+        await engine.start();
         isInitializedRef.current = true;
       } catch (error) {
         console.error('Failed to initialize game:', error);

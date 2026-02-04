@@ -193,10 +193,17 @@ export class GameEngine {
   private hitParticles: Particle[] = [];
   private ambientParticles: Particle[] = [];
 
+  // レーン脈動用
+  private laneBgGraphic: Graphics | null = null;
+  private laneTopLine: Graphics | null = null;
+  private laneBottomLine: Graphics | null = null;
+  private beatDuration: number = 60 / 128; // BPMから計算
+
   // アニメーション状態
   private glowPhase: number = 0;
   private hitFlashAlpha: number = 0;
   private screenShake: { x: number; y: number } = { x: 0, y: 0 };
+  private chopstickAnim: { squeeze: number; flash: number } = { squeeze: 0, flash: 0 };
   private frameCount: number = 0;
 
   // タイマー・アニメーションフレーム管理
@@ -222,6 +229,9 @@ export class GameEngine {
   // ラーメン進化
   private ramenLevel: number = 0;
   private ramenToppings: Graphics[] = [];
+
+  // コンボマイルストーン
+  private lastMilestoneCombo: number = 0;
 
   // コールバック
   private onScoreUpdate: ((judgment: JudgmentType) => void) | null = null;
@@ -536,18 +546,21 @@ export class GameEngine {
     laneBg.rect(0, laneY - laneHeight / 2, width, laneHeight)
       .fill({ color: 0x000000, alpha: 0.4 });
     this.laneContainer.addChild(laneBg);
+    this.laneBgGraphic = laneBg;
 
     // レーン上端のライン
     const topLine = new Graphics();
     topLine.rect(0, laneY - laneHeight / 2, width, 2)
       .fill({ color: COLORS.GOLD, alpha: 0.4 });
     this.laneContainer.addChild(topLine);
+    this.laneTopLine = topLine;
 
     // レーン下端のライン
     const bottomLine = new Graphics();
     bottomLine.rect(0, laneY + laneHeight / 2 - 2, width, 2)
       .fill({ color: COLORS.GOLD, alpha: 0.4 });
     this.laneContainer.addChild(bottomLine);
+    this.laneBottomLine = bottomLine;
 
     // レーン内のグリッドライン（リズムガイド）
     for (let i = 1; i <= 8; i++) {
@@ -792,8 +805,20 @@ export class GameEngine {
 
     const screenHeight = this.app.screen.height;
     const x = this.config.JUDGE_LINE_X;
-    const gap = this.config.CHOPSTICK_GAP;
+    const baseGap = this.config.CHOPSTICK_GAP;
     const w = this.config.CHOPSTICK_WIDTH;
+
+    // 箸の挟みアニメーション: squeeze > 0 で隙間が狭まる
+    const gap = baseGap * (1 - this.chopstickAnim.squeeze * 0.5);
+
+    // フラッシュ時の箸色補間（通常色→白金）
+    const flashT = this.chopstickAnim.flash;
+    const chopColor = flashT > 0.01
+      ? this.lerpColor(COLORS.CHOPSTICK, 0xfff8e7, flashT)
+      : COLORS.CHOPSTICK;
+    const highlightColor = flashT > 0.01
+      ? this.lerpColor(COLORS.CHOPSTICK_HIGHLIGHT, 0xffffff, flashT)
+      : COLORS.CHOPSTICK_HIGHLIGHT;
 
     // レーンの位置に合わせた箸の高さ
     const laneY = screenHeight - this.config.LANE_BOTTOM_MARGIN - this.config.LANE_HEIGHT / 2;
@@ -803,24 +828,24 @@ export class GameEngine {
     this.chopsticks.clear();
     this.chopsticksGlow.clear();
 
-    // グロー効果
-    const glowAlpha = 0.1 + Math.sin(this.glowPhase) * 0.05;
+    // グロー効果（フラッシュ時は強化）
+    const glowAlpha = 0.1 + Math.sin(this.glowPhase) * 0.05 + flashT * 0.3;
     this.chopsticksGlow.roundRect(x - gap / 2 - w - 10, chopstickTop, w + 20, chopstickHeight, w)
       .fill({ color: COLORS.CHOPSTICK_GLOW, alpha: glowAlpha });
     this.chopsticksGlow.roundRect(x + gap / 2 - 10, chopstickTop, w + 20, chopstickHeight, w)
       .fill({ color: COLORS.CHOPSTICK_GLOW, alpha: glowAlpha });
 
     // 左の箸
-    this.chopsticks.roundRect(x - gap / 2 - w, chopstickTop, w, chopstickHeight, w / 2).fill(COLORS.CHOPSTICK);
+    this.chopsticks.roundRect(x - gap / 2 - w, chopstickTop, w, chopstickHeight, w / 2).fill(chopColor);
     // ハイライト
     this.chopsticks.roundRect(x - gap / 2 - w + 1, chopstickTop, 3, chopstickHeight, 1)
-      .fill({ color: COLORS.CHOPSTICK_HIGHLIGHT, alpha: 0.7 });
+      .fill({ color: highlightColor, alpha: 0.7 });
 
     // 右の箸
-    this.chopsticks.roundRect(x + gap / 2, chopstickTop, w, chopstickHeight, w / 2).fill(COLORS.CHOPSTICK);
+    this.chopsticks.roundRect(x + gap / 2, chopstickTop, w, chopstickHeight, w / 2).fill(chopColor);
     // ハイライト
     this.chopsticks.roundRect(x + gap / 2 + 1, chopstickTop, 3, chopstickHeight, 1)
-      .fill({ color: COLORS.CHOPSTICK_HIGHLIGHT, alpha: 0.7 });
+      .fill({ color: highlightColor, alpha: 0.7 });
 
     // 装飾（箸の上部に金のライン）
     this.chopsticks.roundRect(x - gap / 2 - w, chopstickTop + 10, w, 20, 2)
@@ -886,6 +911,7 @@ export class GameEngine {
     }
 
     this.audioEngine.setBPM(beatmap.meta.bpm);
+    this.beatDuration = 60 / beatmap.meta.bpm;
     const bgmUrl = `/ramen-master${beatmap.audio.bgm}`;
     await this.audioEngine.loadBGM(bgmUrl);
   }
@@ -893,10 +919,9 @@ export class GameEngine {
   /**
    * ゲーム開始
    */
-  start(): void {
+  async start(): Promise<void> {
     if (!this.app || !this.beatmap) return;
 
-    this.isRunning = true;
     this.noteManager.reset();
     this.noteGraphics.clear();
     this.steamParticles = [];
@@ -904,8 +929,10 @@ export class GameEngine {
     this.glowPhase = 0;
     this.hitFlashAlpha = 0;
     this.screenShake = { x: 0, y: 0 };
+    this.chopstickAnim = { squeeze: 0, flash: 0 };
     this.lastChaosScore = 0;
     this.lastJudgmentForChaos = null;
+    this.lastMilestoneCombo = 0;
     this.ramenLevel = 0;
     this.ramenToppings.forEach(g => g.destroy());
     this.ramenToppings = [];
@@ -914,8 +941,105 @@ export class GameEngine {
       this.notesContainer.removeChildren();
     }
 
+    // カウントダウン演出
+    await this.playCountdown();
+    if (this.isDisposed) return;
+
+    this.isRunning = true;
     this.audioEngine.play(this.beatmap.meta.offset);
     this.app.ticker.add(this.gameLoop);
+  }
+
+  /**
+   * カウントダウン演出（3→2→1→湯切り開始！）
+   */
+  private playCountdown(): Promise<void> {
+    return new Promise((resolve) => {
+      if (!this.app || !this.effectsContainer) {
+        resolve();
+        return;
+      }
+
+      const width = this.app.screen.width;
+      const height = this.app.screen.height;
+      const baseFontSize = Math.max(48, 96 * this.config.SCALE);
+
+      const counts = [
+        { text: '3', color: COLORS.GOLD, delay: 0 },
+        { text: '2', color: COLORS.VERMILION, delay: 600 },
+        { text: '1', color: COLORS.CREAM, delay: 1200 },
+        { text: '湯切り開始！', color: COLORS.GOLD_LIGHT, delay: 1800 },
+      ];
+
+      let completed = 0;
+
+      counts.forEach(({ text, color, delay }) => {
+        this.safeSetTimeout(() => {
+          if (this.isDisposed || !this.effectsContainer) return;
+
+          // SE再生
+          if (text === '湯切り開始！') {
+            this.audioEngine.playSynthJudgmentSE('PERFECT');
+          } else {
+            this.audioEngine.playSynthJudgmentSE('GREAT');
+          }
+
+          const fontSize = text.length > 2 ? baseFontSize * 0.6 : baseFontSize;
+          const style = new TextStyle({
+            fontFamily: '"Hiragino Mincho ProN", "Yu Mincho", serif',
+            fontSize,
+            fontWeight: 'bold',
+            fill: color,
+            stroke: { color: 0x000000, width: 5 },
+            dropShadow: { color, blur: 25, distance: 0, alpha: 0.8 },
+          });
+
+          const countText = new Text({ text, style });
+          countText.anchor.set(0.5);
+          countText.x = width / 2;
+          countText.y = height * 0.4;
+          countText.alpha = 0;
+          countText.scale.set(0.5);
+          this.effectsContainer!.addChild(countText);
+
+          // アニメーション: ズームイン → フェードアウト
+          let frame = 0;
+          const totalFrames = 30; // ~500ms at 60fps
+          const animate = () => {
+            frame++;
+            const progress = frame / totalFrames;
+
+            if (progress < 0.3) {
+              // ズームイン (easeOutCubic)
+              const t = progress / 0.3;
+              const ease = 1 - Math.pow(1 - t, 3);
+              countText.alpha = ease;
+              countText.scale.set(0.5 + ease * 0.8);
+            } else if (progress < 0.7) {
+              // 表示中
+              countText.alpha = 1;
+              countText.scale.set(1.3);
+            } else {
+              // フェードアウト
+              const t = (progress - 0.7) / 0.3;
+              countText.alpha = 1 - t;
+              countText.scale.set(1.3 + t * 0.2);
+            }
+
+            if (frame < totalFrames) {
+              this.safeRequestAnimationFrame(animate);
+            } else {
+              countText.destroy();
+              completed++;
+              if (completed === counts.length) {
+                resolve();
+              }
+            }
+          };
+          this.safeRequestAnimationFrame(animate);
+        }, delay);
+      });
+    });
   }
 
   /**
@@ -944,6 +1068,18 @@ export class GameEngine {
     if (this.frameCount % this.config.GLOW_UPDATE_INTERVAL === 0) {
       this.drawChopsticks();
     }
+
+    // BPM同期レーン脈動
+    const beatPhase = (currentTime % this.beatDuration) / this.beatDuration;
+    const pulseAlpha = 0.35 + 0.15 * Math.pow(Math.cos(beatPhase * Math.PI * 2), 8);
+    if (this.laneBgGraphic) this.laneBgGraphic.alpha = pulseAlpha;
+    const lineAlpha = 0.3 + 0.3 * Math.pow(Math.cos(beatPhase * Math.PI * 2), 8);
+    if (this.laneTopLine) this.laneTopLine.alpha = lineAlpha;
+    if (this.laneBottomLine) this.laneBottomLine.alpha = lineAlpha;
+
+    // 箸アニメーション減衰
+    this.chopstickAnim.squeeze *= 0.8;
+    this.chopstickAnim.flash *= 0.85;
 
     // 画面シェイク減衰
     this.screenShake.x *= ANIMATION_CONFIG.SCREEN_SHAKE_DECAY;
@@ -1034,8 +1170,24 @@ export class GameEngine {
       container.x = noteX - this.config.NOTE_WIDTH / 2;
       container.y = noteY;
 
-      // 判定ラインに近づくほど光る
+      // 接近アニメーション: 右端から小さく→判定ラインで等倍
+      const approachFactor = Math.min(1, Math.max(0, (screenWidth - noteX) / screenWidth));
+      const noteScale = 0.6 + 0.4 * approachFactor;
+
+      // BPM脈動: ビート頭で微かに膨張
+      const beatPhase = (currentTime % this.beatDuration) / this.beatDuration;
+      const beatPulse = beatPhase < 0.1 ? 0.05 * (1 - beatPhase / 0.1) : 0;
+      container.scale.set(noteScale + beatPulse);
+
+      // 判定ライン近くで揺れ
       const distance = Math.abs(noteX - this.config.JUDGE_LINE_X);
+      if (distance < 150) {
+        container.rotation = Math.sin(this.frameCount * 0.15) * 0.08 * (1 - distance / 150);
+      } else {
+        container.rotation = 0;
+      }
+
+      // 判定ラインに近づくほど光る
       const glowIntensity = Math.max(0, 1 - distance / 200);
 
       // children: [0]=glow, [1]=shadow, [2]=note
@@ -1383,6 +1535,97 @@ export class GameEngine {
   }
 
   /**
+   * コンボマイルストーン演出（10/20/30/50コンボ）
+   */
+  private triggerComboMilestone(combo: number): void {
+    if (!this.app || !this.effectsContainer) return;
+
+    const milestones: [number, string, number][] = [
+      [10, 'いい感じ！', COLORS.GOLD],
+      [20, '最高じゃん！', COLORS.VERMILION_LIGHT],
+      [30, 'まさに職人！', COLORS.CREAM],
+      [50, '伝説の湯切り！！', COLORS.SPARKLE],
+    ];
+
+    const milestone = milestones.find(([threshold]) =>
+      combo >= threshold && this.lastMilestoneCombo < threshold
+    );
+
+    if (!milestone) return;
+    this.lastMilestoneCombo = combo;
+
+    const [threshold, message, color] = milestone;
+    const width = this.app.screen.width;
+    const height = this.app.screen.height;
+    const fontSize = Math.max(28, 56 * this.config.SCALE);
+
+    // テキスト演出
+    const style = new TextStyle({
+      fontFamily: '"Hiragino Mincho ProN", "Yu Mincho", serif',
+      fontSize,
+      fontWeight: 'bold',
+      fill: color,
+      stroke: { color: 0x000000, width: 4 },
+      dropShadow: { color, blur: 20, distance: 0, alpha: 0.8 },
+    });
+
+    const milestoneText = new Text({ text: `${combo} COMBO!\n${message}`, style });
+    milestoneText.anchor.set(0.5);
+    milestoneText.x = width / 2;
+    milestoneText.y = height * 0.25;
+    milestoneText.alpha = 0;
+    milestoneText.scale.set(0.5);
+    this.effectsContainer.addChild(milestoneText);
+
+    // パーティクル爆発（丼位置）
+    const laneY = height - this.config.LANE_BOTTOM_MARGIN - this.config.LANE_HEIGHT / 2;
+    const particleCount = threshold >= 50 ? 48 : threshold >= 30 ? 32 : threshold >= 20 ? 24 : 16;
+    this.spawnHitParticles(this.config.JUDGE_LINE_X, laneY, color, particleCount);
+
+    // 50コンボで虹フラッシュ
+    if (threshold >= 50) {
+      this.playRainbowEffect();
+    }
+
+    // 20コンボ以上で画面シェイク
+    if (threshold >= 20) {
+      this.screenShake.x = 8;
+      this.screenShake.y = 5;
+    }
+
+    // テキストアニメーション
+    let frame = 0;
+    const totalFrames = 90;
+    const animate = () => {
+      frame++;
+      const progress = frame / totalFrames;
+
+      if (progress < 0.2) {
+        const t = progress / 0.2;
+        const ease = 1 - Math.pow(1 - t, 3);
+        milestoneText.alpha = ease;
+        milestoneText.scale.set(0.5 + ease * 0.8);
+      } else if (progress < 0.65) {
+        milestoneText.alpha = 1;
+        milestoneText.scale.set(1.3);
+        milestoneText.y = height * 0.25 + Math.sin(frame * 0.1) * 3;
+      } else {
+        const t = (progress - 0.65) / 0.35;
+        milestoneText.alpha = 1 - t;
+        milestoneText.scale.set(1.3 + t * 0.3);
+        milestoneText.y = height * 0.25 - t * 40;
+      }
+
+      if (frame < totalFrames) {
+        this.safeRequestAnimationFrame(animate);
+      } else {
+        milestoneText.destroy();
+      }
+    };
+    this.safeRequestAnimationFrame(animate);
+  }
+
+  /**
    * カオスイベントを判定・発動
    */
   private triggerChaosEvent(score: number, judgment: JudgmentType): void {
@@ -1688,6 +1931,12 @@ export class GameEngine {
       this.audioEngine.playSynthJudgmentSE(judgment);
       this.lastJudgmentForChaos = judgment;
 
+      // 箸アニメーション: タップで挟む
+      this.chopstickAnim.squeeze = 1.0;
+      if (judgment === 'PERFECT') {
+        this.chopstickAnim.flash = 1.0;
+      }
+
       if (judgment !== 'MISS') {
         // レーンのY座標でパーティクル発生
         const laneY = this.app.screen.height - this.config.LANE_BOTTOM_MARGIN - this.config.LANE_HEIGHT / 2;
@@ -1764,11 +2013,15 @@ export class GameEngine {
       } else {
         this.comboText.text = '';
         this.comboLabel.alpha = 0;
+        this.lastMilestoneCombo = 0; // コンボリセット時にマイルストーンもリセット
       }
     }
 
     // ラーメン進化チェック
     this.updateRamenEvolution(combo);
+
+    // コンボマイルストーン演出
+    this.triggerComboMilestone(combo);
 
     // カオスイベント判定（スコアが確定した状態で実行）
     if (this.lastJudgmentForChaos) {
@@ -1826,6 +2079,9 @@ export class GameEngine {
     this.chefBaseScales.clear();
     this.chopsticks = null;
     this.chopsticksGlow = null;
+    this.laneBgGraphic = null;
+    this.laneTopLine = null;
+    this.laneBottomLine = null;
     this.judgmentText = null;
     this.judgmentSubText = null;
     this.scoreText = null;
